@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -19,6 +19,7 @@ import type { StudentPreferences } from "@/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import Papa from 'papaparse';
 
 
 export default function CourseScheduler() {
@@ -126,7 +127,7 @@ export default function CourseScheduler() {
         try {
           const result = await extractCoursesFromPdf({ pdfDataUri });
           const newCourses = result.courses.filter(
-            (newCourse) => !availableCourses.some(
+            (newCourse: any) => !availableCourses.some(
                 (existing) => existing.code === newCourse.code && existing.group === newCourse.group
             )
           );
@@ -154,6 +155,67 @@ export default function CourseScheduler() {
       });
     };
   };
+
+  const handleCsvUpload = (file: File) => {
+    startProcessingTransition(() => {
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                try {
+                    const parsedCourses: Omit<Course, "id">[] = results.data.map((row: any) => {
+                        if (!row.code || !row.name || !row.instructorName || !row.category || !row.timeslots || !row.locations) {
+                            throw new Error('فایل CSV دارای ستون‌های مورد نیاز نیست. ستون‌های الزامی: code, name, instructorName, category, timeslots, locations');
+                        }
+                        const instructorId = row.instructorName.replace(/\s+/g, '-').toLowerCase();
+                        return {
+                            code: row.code,
+                            name: row.name,
+                            instructors: [{ id: instructorId, name: row.instructorName }],
+                            category: row.category,
+                            // Assuming timeslots and locations are separated by a semicolon in the CSV
+                            timeslots: row.timeslots.split(';').map((s: string) => s.trim()),
+                            locations: row.locations.split(';').map((s: string) => s.trim()),
+                            group: row.group || undefined,
+                        };
+                    });
+
+                    const coursesWithIds = parsedCourses.map(course => ({
+                        ...course,
+                        id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
+                    }));
+
+                    const newCourses = coursesWithIds.filter(
+                        (newCourse) => !availableCourses.some(
+                            (existing) => existing.code === newCourse.code && existing.group === newCourse.group
+                        )
+                    );
+
+                    setAvailableCourses(prev => [...prev, ...newCourses]);
+                    toast({
+                        title: "استخراج موفق",
+                        description: `${newCourses.length} درس جدید از فایل CSV استخراج شد.`,
+                    });
+                } catch (error: any) {
+                    console.error("خطا در پردازش CSV:", error);
+                    toast({
+                        title: "خطا در پردازش فایل",
+                        description: error.message || "ساختار فایل CSV صحیح نیست.",
+                        variant: "destructive",
+                    });
+                }
+            },
+            error: (error: any) => {
+                console.error("خطا در پارس کردن CSV:", error);
+                toast({
+                    title: "خطا در آپلود",
+                    description: "پارس کردن فایل CSV با شکست مواجه شد.",
+                    variant: "destructive",
+                });
+            },
+        });
+    });
+};
   
   const handleRemoveCourse = (courseId: string) => {
     setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
@@ -215,12 +277,16 @@ export default function CourseScheduler() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pdf">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> فایل PDF</TabsTrigger>
+                <TabsTrigger value="csv" disabled={isProcessing}><Sheet className="ml-2" /> فایل اکسل (CSV)</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
-                 <CourseSelection onPdfUpload={handlePdfUpload} isProcessing={isProcessing} />
+                 <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند." />
+              </TabsContent>
+               <TabsContent value="csv" className="pt-4">
+                 <CourseSelection onFileUpload={handleCsvUpload} isProcessing={isProcessing} accept=".csv" title="آپلود چارت درسی (CSV)" description="فایل اکسل خود را با فرمت CSV ذخیره کرده و اینجا آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
                 <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
@@ -250,7 +316,7 @@ export default function CourseScheduler() {
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
                         <FileUp className="h-10 w-10 mb-4" />
                         <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
-                        <p className="text-sm">برای شروع، یک فایل PDF آپلود کنید یا به صورت دستی درس اضافه کنید.</p>
+                        <p className="text-sm">برای شروع، یک فایل PDF، CSV یا به صورت دستی درس اضافه کنید.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -322,3 +388,5 @@ export default function CourseScheduler() {
     </div>
   );
 }
+
+    

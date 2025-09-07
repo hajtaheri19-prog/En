@@ -10,20 +10,26 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 
 interface CourseSelectionProps {
-  onPdfUpload: (file: File) => void;
+  onFileUpload: (file: File) => void;
   isProcessing: boolean;
+  accept: string;
+  title: string;
+  description: string;
 }
 
 export default function CourseSelection({
-  onPdfUpload,
+  onFileUpload,
   isProcessing,
+  accept,
+  title,
+  description
 }: CourseSelectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onPdfUpload(file);
+      onFileUpload(file);
       event.target.value = "";
     }
   };
@@ -32,9 +38,9 @@ export default function CourseSelection({
     <div className="space-y-4">
       <Alert>
         <FileUp className="h-4 w-4" />
-        <AlertTitle>آپلود چارت درسی</AlertTitle>
+        <AlertTitle>{title}</AlertTitle>
         <AlertDescription>
-          فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند.
+          {description}
         </AlertDescription>
       </Alert>
       <Button 
@@ -42,22 +48,24 @@ export default function CourseSelection({
           variant="outline"
           className="w-full"
           disabled={isProcessing}
-          aria-label="آپلود PDF"
+          aria-label="آپلود فایل"
         >
           {isProcessing ? (
             <Loader2 className="h-4 w-4 animate-spin ml-2" />
           ) : (
             <FileUp className="h-4 w-4 ml-2" />
           )}
-          <span>{isProcessing ? "در حال پردازش..." : "انتخاب و آپلود فایل PDF"}</span>
+          <span>{isProcessing ? "در حال پردازش..." : `انتخاب و آپلود فایل (${accept})`}</span>
         </Button>
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
-          accept="application/pdf"
+          accept={accept}
         />
     </div>
   );
 }
+
+    

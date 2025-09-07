@@ -2,7 +2,7 @@
 
 import { menuSuggestionFlow } from "@/ai/flows/menu-suggestion-flow";
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Bot, User, Send, CornerDownLeft, Loader2 } from "lucide-react";
+import { Bot, User, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -72,6 +72,13 @@ export default function AiAssistant() {
   return (
     <div className="flex flex-col h-full p-2">
       <div className="flex-1 overflow-y-auto space-y-4 p-4">
+        {history.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <Bot className="h-12 w-12 mb-4" />
+            <h3 className="font-semibold text-lg">دستیار هوشمند</h3>
+            <p className="text-sm">می‌توانید سوالات خود را در مورد انتخاب واحد، برنامه درسی یا حتی برنامه غذایی بپرسید!</p>
+          </div>
+        )}
         {history.map((msg, index) => (
           <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
@@ -119,3 +126,5 @@ export default function AiAssistant() {
     </div>
   );
 }
+
+    
