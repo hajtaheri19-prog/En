@@ -3,23 +3,29 @@
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { suggestOptimalSchedule } from "@/ai/flows/suggest-optimal-schedule";
 import type { Course } from "@/types";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
 import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
+import { Separator } from "./ui/separator";
+import StudentPreferencesForm from "./student-preferences-form";
+import type { StudentPreferences } from "@/types";
+
 
 export default function CourseScheduler() {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
-  const [instructorPrefs, setInstructorPrefs] = useState<Record<string, string>>({}); // course.id -> instructor.id
+  const [studentPreferences, setStudentPreferences] = useState<StudentPreferences>({
+      instructorPreferences: [],
+  });
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
-  const [isGenerating, startTransition] = useTransition();
-  const [isExtracting, startExtractingTransition] = useTransition();
+  const [isProcessing, startProcessingTransition] = useTransition();
   const { toast } = useToast();
 
   const handleAddCourse = (newCourse: Omit<Course, "id">) => {
@@ -31,42 +37,21 @@ export default function CourseScheduler() {
     });
   };
 
-  const handleSelectCourse = (course: Course) => {
-    setSelectedCourses((prev) =>
-      prev.some((c) => c.id === course.id)
-        ? prev.filter((c) => c.id !== course.id)
-        : [...prev, course]
-    );
-    // Reset instructor pref if course is removed
-    if (selectedCourses.some((c) => c.id === course.id)) {
-      setInstructorPrefs(prev => {
-        const newPrefs = { ...prev };
-        delete newPrefs[course.id];
-        return newPrefs;
-      });
-    }
-  };
-
-  const handleSetInstructorPref = (courseId: string, instructorId: string) => {
-    setInstructorPrefs((prev) => ({ ...prev, [courseId]: instructorId }));
-  };
-
   const handleGenerateSchedule = () => {
-    if (selectedCourses.length === 0) {
+    if (availableCourses.length === 0) {
       toast({
-        title: "هیچ درسی انتخاب نشده است",
-        description: "لطفاً برای ایجاد برنامه حداقل یک درس را انتخاب کنید.",
+        title: "هیچ درسی موجود نیست",
+        description: "لطفاً برای ایجاد برنامه، ابتدا دروس را اضافه کنید.",
         variant: "destructive",
       });
       return;
     }
 
-    startTransition(async () => {
+    startProcessingTransition(async () => {
+      setScheduleResult(null); // Clear previous results
       const input = {
-        courseSelections: selectedCourses.map((course) => ({
-          courseCode: course.code,
-          instructorPreference: instructorPrefs[course.id] ? [instructorPrefs[course.id]] : [],
-        })),
+        availableCourses: availableCourses,
+        studentPreferences: studentPreferences,
         studentId: "S-12345", // Mock data
         term: "پاییز ۱۴۰۳",     // Mock data
       };
@@ -74,6 +59,10 @@ export default function CourseScheduler() {
       try {
         const result = await suggestOptimalSchedule(input);
         setScheduleResult(result);
+        toast({
+          title: "برنامه بهینه ایجاد شد",
+          description: result.rationale,
+        });
       } catch (error) {
         console.error("خطا در ایجاد برنامه:", error);
         toast({
@@ -90,17 +79,19 @@ export default function CourseScheduler() {
     reader.readAsDataURL(file);
     reader.onload = () => {
       const pdfDataUri = reader.result as string;
-      startExtractingTransition(async () => {
+      startProcessingTransition(async () => {
         try {
           const result = await extractCoursesFromPdf({ pdfDataUri });
-          // Prevent duplicates by checking course code
+          // Prevent duplicates by checking course code and group
           const newCourses = result.courses.filter(
-            (newCourse) => !availableCourses.some((existing) => existing.code === newCourse.code)
+            (newCourse) => !availableCourses.some(
+                (existing) => existing.code === newCourse.code && existing.group === newCourse.group
+            )
           );
           setAvailableCourses(prev => [...prev, ...newCourses]);
           toast({
             title: "استخراج موفق",
-            description: `${result.courses.length} درس از فایل PDF استخراج شد.`,
+            description: `${newCourses.length} درس جدید از فایل PDF استخراج شد.`,
           });
         } catch (error) {
           console.error("خطا در استخراج PDF:", error);
@@ -124,47 +115,133 @@ export default function CourseScheduler() {
   
   const handleRemoveCourse = (courseId: string) => {
     setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
-    setSelectedCourses(prev => prev.filter(c => c.id !== courseId));
   };
+  
+  const handleClearAllCourses = () => {
+    setAvailableCourses([]);
+    toast({
+        title: "همه دروس پاک شدند",
+        description: "لیست دروس موجود اکنون خالی است.",
+    });
+  };
+
+  const courseGroups = useMemo(() => {
+    const groups: Record<string, Course[]> = {};
+    availableCourses.forEach(course => {
+        const groupKey = course.group || 'عمومی/بدون گروه';
+        if (!groups[groupKey]) {
+            groups[groupKey] = [];
+        }
+        groups[groupKey].push(course);
+    });
+    return groups;
+  }, [availableCourses]);
 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-      <div className="lg:col-span-2 flex flex-col gap-8">
+      <div className="lg:col-span-2 flex flex-col gap-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>افزودن دروس</CardTitle>
-            <CardDescription>دروس را به صورت دستی یا با آپلود فایل PDF اضافه کنید.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
+            <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="manual">
+            <Tabs defaultValue="pdf">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="manual"><ListPlus className="ml-2" /> دستی</TabsTrigger>
-                <TabsTrigger value="pdf"><FileUp className="ml-2" /> فایل PDF</TabsTrigger>
+                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> فایل PDF</TabsTrigger>
+                <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
-              <TabsContent value="manual" className="pt-4">
-                <AddCourseForm onAddCourse={handleAddCourse} isExtracting={isExtracting} />
-              </TabsContent>
               <TabsContent value="pdf" className="pt-4">
-                 <CourseSelection
-                    availableCourses={availableCourses}
-                    selectedCourses={selectedCourses}
-                    instructorPrefs={instructorPrefs}
-                    onSelectCourse={handleSelectCourse}
-                    onSetInstructorPref={handleSetInstructorPref}
-                    onGenerateSchedule={handleGenerateSchedule}
-                    onPdfUpload={handlePdfUpload}
-                    onRemoveCourse={handleRemoveCourse}
-                    isGenerating={isGenerating}
-                    isExtracting={isExtracting}
-                  />
+                 <CourseSelection onPdfUpload={handlePdfUpload} isProcessing={isProcessing} />
+              </TabsContent>
+               <TabsContent value="manual" className="pt-4">
+                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
+             <div className="flex justify-between items-center">
+                <CardDescription>
+                    {availableCourses.length} درس در {Object.keys(courseGroups).length} گروه
+                </CardDescription>
+                {availableCourses.length > 0 && (
+                    <Button variant="destructive" size="sm" onClick={handleClearAllCourses} disabled={isProcessing}>
+                        <Trash2 className="ml-2 h-4 w-4" />
+                        پاک کردن همه
+                    </Button>
+                )}
+            </div>
+          </CardHeader>
+          <CardContent>
+             <ScrollArea className="h-[250px] pr-3">
+                {availableCourses.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                        <FileUp className="h-10 w-10 mb-4" />
+                        <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
+                        <p className="text-sm">برای شروع، یک فایل PDF آپلود کنید یا به صورت دستی درس اضافه کنید.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {Object.entries(courseGroups).map(([groupName, courses]) => (
+                            <div key={groupName}>
+                                <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
+                                <div className="space-y-2">
+                                    {courses.map(course => (
+                                        <div key={course.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/50">
+                                            <div>
+                                                <p className="font-medium text-sm">{course.name} ({course.code})</p>
+                                                <p className="text-xs text-muted-foreground">{course.timeslot}</p>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveCourse(course.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+             </ScrollArea>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
+                <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <StudentPreferencesForm
+                    preferences={studentPreferences}
+                    onPreferencesChange={setStudentPreferences}
+                    generalCourses={availableCourses.filter(c => c.category === 'عمومی')}
+                    isProcessing={isProcessing}
+                />
+            </CardContent>
+        </Card>
+
+        <Button size="lg" className="w-full shadow-lg" onClick={handleGenerateSchedule} disabled={isProcessing || availableCourses.length === 0}>
+           {isProcessing ? (
+                <>
+                  <WandSparkles className="ml-2 h-4 w-4 animate-spin" />
+                  در حال تحلیل و بررسی...
+                </>
+              ) : (
+                <>
+                  <WandSparkles className="ml-2 h-4 w-4" />
+                  ایجاد بهترین برنامه ممکن
+                </>
+            )}
+        </Button>
       </div>
       <div className="lg:col-span-3">
-        <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isGenerating} />
+        <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} />
       </div>
     </div>
   );

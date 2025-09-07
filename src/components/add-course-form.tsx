@@ -35,16 +35,17 @@ const formSchema = z.object({
     message: 'فرمت زمان باید "روز ساعت شروع-ساعت پایان" باشد (مثال: شنبه 10:00-12:00)',
   }),
   location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+  group: z.string().optional(),
 });
 
 type AddCourseFormValues = z.infer<typeof formSchema>;
 
 interface AddCourseFormProps {
   onAddCourse: (course: Omit<Course, "id">) => void;
-  isExtracting: boolean;
+  isProcessing: boolean;
 }
 
-export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps) {
+export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps) {
   const form = useForm<AddCourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,11 +53,12 @@ export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps)
       code: "",
       timeslot: "",
       location: "",
+      group: "",
     },
   });
 
   function onSubmit(values: AddCourseFormValues) {
-    const instructor = INSTRUCTORS[values.instructorId];
+    const instructor = Object.values(INSTRUCTORS).find(inst => inst.id === values.instructorId);
     if (!instructor) {
         console.error("استاد انتخاب شده نامعتبر است.");
         return;
@@ -69,6 +71,7 @@ export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps)
       category: values.category,
       timeslot: values.timeslot,
       location: values.location,
+      group: values.group || undefined,
     };
     onAddCourse(newCourse);
     form.reset();
@@ -77,32 +80,34 @@ export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps)
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>نام درس</FormLabel>
-              <FormControl>
-                <Input placeholder="مثال: مبانی کامپیوتر" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="code"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>کد درس</FormLabel>
-              <FormControl>
-                <Input placeholder="مثال: CS101" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>نام درس</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: مبانی کامپیوتر" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>کد درس</FormLabel>
+                <FormControl>
+                  <Input placeholder="مثال: CS101" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="instructorId"
@@ -125,29 +130,44 @@ export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps)
             </FormItem>
           )}
         />
-         <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>دسته‌بندی</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+           <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>دسته‌بندی</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="یک دسته‌بندی را انتخاب کنید" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="عمومی">عمومی</SelectItem>
+                    <SelectItem value="تخصصی">تخصصی</SelectItem>
+                    <SelectItem value="تربیتی">تربیتی</SelectItem>
+                    <SelectItem value="فرهنگی">فرهنگی</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="group"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>گروه (اختیاری)</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="یک دسته‌بندی را انتخاب کنید" />
-                  </SelectTrigger>
+                  <Input placeholder="مثال: گروه 5" {...field} />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="عمومی">عمومی</SelectItem>
-                  <SelectItem value="تخصصی">تخصصی</SelectItem>
-                  <SelectItem value="تربیتی">تربیتی</SelectItem>
-                  <SelectItem value="فرهنگی">فرهنگی</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
          <FormField
           control={form.control}
           name="timeslot"
@@ -174,7 +194,7 @@ export function AddCourseForm({ onAddCourse, isExtracting }: AddCourseFormProps)
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isExtracting}>
+        <Button type="submit" className="w-full" disabled={isProcessing}>
           <PlusCircle className="ml-2 h-4 w-4" />
           افزودن درس
         </Button>

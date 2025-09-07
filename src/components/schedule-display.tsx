@@ -1,7 +1,7 @@
 "use client";
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
-import { AlertCircle, CalendarDays, Lightbulb } from "lucide-react";
+import { AlertCircle, CalendarDays, Lightbulb, Group } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -44,13 +44,14 @@ const getGridPosition = (timeslot: string) => {
     
     const gridColumn = dayToGridCol(day);
     const gridRowStart = timeToGridRow(startTime);
-    const gridRowEnd = timeToGridRow(endTime);
+    // Use Math.ceil for end time to handle cases like 13:30
+    const gridRowEnd = Math.ceil(timeToGridRow(endTime.split(':')[0] + ':00'));
 
     if (gridColumn === 0 || !gridRowStart || !gridRowEnd) return null;
     
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / ${gridRowEnd}`,
+      gridRow: `${gridRowStart} / ${gridRowEnd + 1}`, // +1 because grid row end is exclusive
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
@@ -79,14 +80,17 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
         "bg-cyan-100 border-cyan-200 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-800 dark:text-cyan-200",
       ];
       
+      const courseColor = item.group ? (parseInt(item.group.replace('گروه', '').trim()) % colorClasses.length) : (index % colorClasses.length);
+
       return (
         <div
           key={index}
-          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[index % colorClasses.length]}`}
+          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColor]}`}
           style={{ gridColumn: pos.gridColumn, gridRow: pos.gridRow }}
         >
-          <p className="font-bold">{item.courseCode}</p>
+          <p className="font-bold">{item.courseName}</p>
           <p className="text-xs opacity-80">{item.instructor}</p>
+          <p className="text-xs opacity-60 mt-1">{item.location}</p>
         </div>
       );
     });
@@ -113,16 +117,17 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
         <Skeleton className="col-start-4 row-start-3 row-end-5 rounded-lg" />
         <Skeleton className="col-start-6 row-start-6 row-end-8 rounded-lg" />
         <Skeleton className="col-start-3 row-start-9 row-end-11 rounded-lg" />
+        <Skeleton className="col-start-5 row-start-1 row-end-3 rounded-lg" />
       </div>
     </div>
   );
 
   return (
-    <Card className="shadow-lg h-full">
+    <Card className="shadow-lg h-full sticky top-8">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <CalendarDays className="ml-2" />
-          برنامه هفتگی شما
+          برنامه هفتگی پیشنهادی
         </CardTitle>
         <CardDescription>برنامه بهینه پیشنهاد شده توسط هوش مصنوعی در اینجا نمایش داده می‌شود.</CardDescription>
       </CardHeader>
@@ -151,8 +156,8 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
                 {/* Schedule Items Container */}
                 <div className="absolute inset-0 top-[41px] right-[57px] p-1 grid grid-cols-6 grid-rows-[repeat(13,40px)] gap-1">
                   {(!scheduleResult || scheduleResult.schedule.length === 0) && (
-                     <div className="col-span-full row-span-full flex items-center justify-center">
-                        <p className="text-muted-foreground">برنامه شما در اینجا نمایش داده می‌شود.</p>
+                     <div className="col-span-full row-span-full flex items-center justify-center text-center">
+                        <p className="text-muted-foreground">پس از افزودن دروس و تعیین اولویت‌ها، <br /> بهترین برنامه ممکن برای شما اینجا ساخته می‌شود.</p>
                      </div>
                   )}
                   {renderScheduleItems()}
@@ -161,7 +166,13 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
 
             {scheduleResult && (
               <div className="mt-6 space-y-4">
-                {scheduleResult.conflicts.length > 0 && (
+                 {scheduleResult.recommendedGroup && (
+                  <Alert variant="default" className="bg-primary/10 border-primary/20">
+                    <Group className="h-4 w-4 ml-2 text-primary" />
+                    <AlertTitle className="font-headline text-primary">گروه پیشنهادی: {scheduleResult.recommendedGroup}</AlertTitle>
+                  </Alert>
+                )}
+                {scheduleResult.conflicts && scheduleResult.conflicts.length > 0 && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4 ml-2" />
                     <AlertTitle className="font-headline">تداخل در برنامه</AlertTitle>
