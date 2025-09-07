@@ -3,12 +3,14 @@
 import type { Course } from "@/types";
 import {
   BookOpen,
+  FileUp,
+  Loader2,
   PlusCircle,
   Sparkles,
   Trash2,
   Users,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import {
@@ -38,7 +40,9 @@ interface CourseSelectionProps {
   onSelectCourse: (course: Course) => void;
   onSetInstructorPref: (courseId: string, instructorId: string) => void;
   onGenerateSchedule: () => void;
+  onPdfUpload: (file: File) => void;
   isGenerating: boolean;
+  isExtracting: boolean;
 }
 
 export default function CourseSelection({
@@ -48,9 +52,12 @@ export default function CourseSelection({
   onSelectCourse,
   onSetInstructorPref,
   onGenerateSchedule,
+  onPdfUpload,
   isGenerating,
+  isExtracting,
 }: CourseSelectionProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredCourses = useMemo(() => {
     return availableCourses.filter((course) =>
@@ -62,6 +69,13 @@ export default function CourseSelection({
   const isCourseSelected = (courseId: string) =>
     selectedCourses.some((c) => c.id === courseId);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onPdfUpload(file);
+    }
+  };
+
   return (
     <>
       <Card className="shadow-lg">
@@ -71,14 +85,36 @@ export default function CourseSelection({
             دروس موجود
           </CardTitle>
           <CardDescription>
-            دروس را جستجو و به انتخاب خود اضافه کنید.
+            دروس را جستجو کرده یا از طریق فایل PDF اضافه کنید.
           </CardDescription>
-          <Input
-            placeholder="جستجو بر اساس نام یا کد..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mt-2"
-          />
+          <div className="flex gap-2 mt-2">
+            <Input
+              placeholder="جستجو بر اساس نام یا کد..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-grow"
+              disabled={isExtracting}
+            />
+            <Button 
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              disabled={isExtracting}
+            >
+              {isExtracting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileUp className="h-4 w-4" />
+              )}
+              <span className="mr-2 hidden sm:inline">آپلود PDF</span>
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="application/pdf"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[300px] pr-4">
@@ -98,6 +134,7 @@ export default function CourseSelection({
                     variant={isCourseSelected(course.id) ? "outline" : "ghost"}
                     size="sm"
                     onClick={() => onSelectCourse(course)}
+                    disabled={isExtracting}
                   >
                     {isCourseSelected(course.id) ? "انتخاب شد" : "افزودن"}
                   </Button>
@@ -131,6 +168,7 @@ export default function CourseSelection({
                     <Select
                       onValueChange={(value) => onSetInstructorPref(course.id, value)}
                       value={instructorPrefs[course.id]}
+                      disabled={isGenerating || isExtracting}
                     >
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="انتخاب استاد" />
@@ -148,6 +186,7 @@ export default function CourseSelection({
                       size="icon"
                       onClick={() => onSelectCourse(course)}
                       aria-label={`حذف ${course.name}`}
+                       disabled={isGenerating || isExtracting}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -167,10 +206,19 @@ export default function CourseSelection({
             <Button
               className="w-full"
               onClick={onGenerateSchedule}
-              disabled={isGenerating}
+              disabled={isGenerating || isExtracting}
             >
-              <Sparkles className="ml-2 h-4 w-4" />
-              {isGenerating ? "در حال ایجاد..." : "ایجاد برنامه بهینه"}
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  در حال ایجاد...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="ml-2 h-4 w-4" />
+                  ایجاد برنامه بهینه
+                </>
+              )}
             </Button>
           </CardFooter>
         )}

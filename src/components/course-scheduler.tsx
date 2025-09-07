@@ -8,12 +8,15 @@ import { useState, useTransition } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
 import { useToast } from "@/hooks/use-toast";
+import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 
 export default function CourseScheduler() {
+  const [availableCourses, setAvailableCourses] = useState<Course[]>(COURSES);
   const [selectedCourses, setSelectedCourses] = useState<Course[]>([]);
   const [instructorPrefs, setInstructorPrefs] = useState<Record<string, string>>({}); // course.id -> instructor.id
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isGenerating, startTransition] = useTransition();
+  const [isExtracting, startExtractingTransition] = useTransition();
   const { toast } = useToast();
 
   const handleSelectCourse = (course: Course) => {
@@ -70,21 +73,60 @@ export default function CourseScheduler() {
     });
   };
 
+  const handlePdfUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const pdfDataUri = reader.result as string;
+      startExtractingTransition(async () => {
+        try {
+          const result = await extractCoursesFromPdf({ pdfDataUri });
+          // Prevent duplicates, merge with existing
+          const newCourses = result.courses.filter(
+            (newCourse) => !availableCourses.some((existing) => existing.id === newCourse.id)
+          );
+          setAvailableCourses(prev => [...prev, ...newCourses]);
+          toast({
+            title: "استخراج موفق",
+            description: `${result.courses.length} درس از فایل PDF استخراج شد.`,
+          });
+        } catch (error) {
+          console.error("خطا در استخراج PDF:", error);
+          toast({
+            title: "خطا در استخراج",
+            description: "پردازش فایل PDF با شکست مواجه شد. لطفاً فایل دیگری را امتحان کنید.",
+            variant: "destructive",
+          });
+        }
+      });
+    };
+    reader.onerror = (error) => {
+      console.error("خطا در خواندن فایل:", error);
+      toast({
+        title: "خطا در فایل",
+        description: "خواندن فایل آپلود شده با شکست مواجه شد.",
+        variant: "destructive",
+      });
+    };
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
       <div className="lg:col-span-2 flex flex-col gap-8">
         <CourseSelection
-          availableCourses={COURSES}
+          availableCourses={availableCourses}
           selectedCourses={selectedCourses}
           instructorPrefs={instructorPrefs}
           onSelectCourse={handleSelectCourse}
           onSetInstructorPref={handleSetInstructorPref}
           onGenerateSchedule={handleGenerateSchedule}
-          isGenerating={isPending}
+          onPdfUpload={handlePdfUpload}
+          isGenerating={isGenerating}
+          isExtracting={isExtracting}
         />
       </div>
       <div className="lg:col-span-3">
-        <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isPending} />
+        <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isGenerating} />
       </div>
     </div>
   );
