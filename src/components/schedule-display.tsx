@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
@@ -28,7 +29,7 @@ const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چ
 const timeSlots = Array.from({ length: 13 }, (_, i) => `${i + 8}:00`); // 8:00 to 20:00
 
 const dayToGridCol = (day: string) => {
-  const d = day.trim().toLowerCase();
+  const d = day.trim();
   switch (d) {
     case "شنبه": return 2;
     case "یکشنبه": return 3;
@@ -41,8 +42,12 @@ const dayToGridCol = (day: string) => {
 };
 
 const timeToGridRow = (time: string) => {
-  const hour = parseInt(time.split(":")[0], 10);
-  return hour - 7; // 8:00 is row 1
+  try {
+    const hour = parseInt(time.split(":")[0], 10);
+    return hour - 7; // 8:00 is row 1
+  } catch {
+    return 1;
+  }
 };
 
 const getGridPosition = (timeslot: string) => {
@@ -55,15 +60,28 @@ const getGridPosition = (timeslot: string) => {
     const [startTime, endTime] = timeRange.split("-");
     
     const gridColumn = dayToGridCol(day);
+    const startHour = parseInt(startTime.split(':')[0]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const endMinutes = parseInt(endTime.split(':')[1]);
+
     const gridRowStart = timeToGridRow(startTime);
-    // Use Math.ceil for end time to handle cases like 13:30
-    const gridRowEnd = Math.ceil(timeToGridRow(endTime.split(':')[0] + ':00'));
+    // End row should be the row of the hour before the end time finishes.
+    // If it ends at 16:00, it occupies up to the 15:00 slot, so end is 16-7=9.
+    let gridRowEnd = timeToGridRow(endTime);
+    if(endMinutes === 0) {
+      gridRowEnd = endHour - 8;
+    } else {
+      gridRowEnd = endHour - 7;
+    }
+    
+    // Duration in hours to calculate row span
+    const duration = (endHour - startHour) + (endMinutes / 60);
 
     if (gridColumn === 0 || !gridRowStart || !gridRowEnd) return null;
     
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / ${gridRowEnd + 1}`, // +1 because grid row end is exclusive
+      gridRow: `${gridRowStart} / span ${Math.ceil(duration)}`,
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
@@ -77,7 +95,7 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
 
   const downloadAsPng = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 1.5 })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = 'schedule.png';
@@ -89,7 +107,7 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
 
   const downloadAsPdf = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2 })
       .then((dataUrl) => {
         const pdf = new jsPDF('landscape', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
         pdf.addImage(dataUrl, 'PNG', 0, 0, scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight);
@@ -134,14 +152,16 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
         "bg-violet-100 border-violet-200 text-violet-800 dark:bg-violet-900/50 dark:border-violet-800 dark:text-violet-200",
         "bg-rose-100 border-rose-200 text-rose-800 dark:bg-rose-900/50 dark:border-rose-800 dark:text-rose-200",
         "bg-cyan-100 border-cyan-200 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-800 dark:text-cyan-200",
+        "bg-lime-100 border-lime-200 text-lime-800 dark:bg-lime-900/50 dark:border-lime-800 dark:text-lime-200",
+        "bg-pink-100 border-pink-200 text-pink-800 dark:bg-pink-900/50 dark:border-pink-800 dark:text-pink-200",
       ];
       
-      const courseColor = item.group ? (parseInt(item.group.replace('گروه', '').trim()) % colorClasses.length) : (index % colorClasses.length);
+      const courseColorIndex = Math.floor(Math.random() * colorClasses.length);
 
       return (
         <div
           key={index}
-          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColor]}`}
+          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColorIndex]}`}
           style={{ gridColumn: pos.gridColumn, gridRow: pos.gridRow }}
         >
           <p className="font-bold">{item.courseName}</p>
@@ -153,28 +173,37 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
   };
 
   const renderSkeleton = () => (
-     <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,1fr)] gap-0 w-full min-h-[520px]">
-      {/* Grid structure */}
-      <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
-      {days.map(day => (
-        <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card border-b">
-          <Skeleton className="h-4 w-12 mx-auto" />
+    <div className="p-4">
+        <div className="space-y-3">
+            <Skeleton className="h-8 w-3/5" />
+            <Skeleton className="h-4 w-4/5" />
         </div>
-      ))}
-      {timeSlots.map((time, index) => (
-        <div key={time} className={`row-start-${index + 2} col-span-1 text-left font-mono text-muted-foreground text-xs p-2 pr-4 border-r`}>{time}</div>
-      ))}
-       {[...Array(6 * 13)].map((_, i) => (
-        <div key={i} className="border-r border-b"></div>
-      ))}
-      {/* Skeleton blocks */}
-      <div className="absolute inset-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,minmax(0,1fr))] gap-1">
-        <Skeleton className="col-start-2 row-start-2 row-end-4 rounded-lg" />
-        <Skeleton className="col-start-4 row-start-3 row-end-5 rounded-lg" />
-        <Skeleton className="col-start-6 row-start-6 row-end-8 rounded-lg" />
-        <Skeleton className="col-start-3 row-start-9 row-end-11 rounded-lg" />
-        <Skeleton className="col-start-5 row-start-1 row-end-3 rounded-lg" />
-      </div>
+        <div className="relative mt-6 grid grid-cols-[auto_repeat(6,1fr)] gap-1 w-full min-h-[520px]">
+            {/* Headers */}
+            {days.map(day => ( <Skeleton key={day} className="h-8 w-full" /> ))}
+            {/* Time slots + Grid */}
+            {[...Array(13)].map((_, i) => (
+                <div key={i} className="col-span-full grid grid-cols-[auto_repeat(6,1fr)] gap-1 mt-1">
+                    <Skeleton className="h-8 w-12" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+            ))}
+            {/* Skeleton blocks */}
+            <div className="absolute inset-0 top-10 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,1fr)] gap-1">
+                <Skeleton className="col-start-2 row-start-2 row-span-2 rounded-lg" />
+                <Skeleton className="col-start-4 row-start-3 row-span-2 rounded-lg" />
+                <Skeleton className="col-start-6 row-start-6 row-span-2 rounded-lg" />
+                <Skeleton className="col-start-3 row-start-9 row-span-2 rounded-lg" />
+                <Skeleton className="col-start-5 row-start-1 row-span-2 rounded-lg" />
+                 <Skeleton className="col-start-3 row-start-5 row-span-2 rounded-lg" />
+                <Skeleton className="col-start-1 row-start-7 row-span-2 rounded-lg" />
+            </div>
+        </div>
     </div>
   );
 
@@ -183,7 +212,7 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
             <CardTitle className="font-headline flex items-center gap-2">
-            <CalendarDays className="ml-2" />
+            <CalendarDays />
             برنامه هفتگی پیشنهادی
             </CardTitle>
             <CardDescription>برنامه بهینه پیشنهاد شده توسط هوش مصنوعی در اینجا نمایش داده می‌شود.</CardDescription>
@@ -218,27 +247,26 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
           renderSkeleton()
         ) : (
           <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,40px)] gap-0 w-full bg-card rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,45px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
-                {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card border-b">{day}</div>)}
+                {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
                 
-                {/* Time slots */}
+                {/* Time slots & Grid Lines */}
                 {timeSlots.map((time, index) => (
-                    <div key={time} className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 border-r`}>{time}</div>
+                   <React.Fragment key={time}>
+                    <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-center`}>{time}</div>
+                     {[...Array(6)].map((_, dayIndex) => (
+                        <div key={`${index}-${dayIndex}`} className={`row-start-${index + 2} col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
+                     ))}
+                   </React.Fragment>
                 ))}
                 
-                {/* Grid Lines */}
-                <div className="col-start-2 col-span-full row-start-2 row-span-full grid grid-cols-6 grid-rows-13">
-                  {[...Array(6 * 13)].map((_, i) => (
-                      <div key={i} className="border-r border-b"></div>
-                  ))}
-                </div>
                 
                 {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[41px] right-[57px] p-1 grid grid-cols-6 grid-rows-[repeat(13,40px)] gap-1">
+                <div className="absolute inset-0 top-[41px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,45px)] gap-1">
                   {(!scheduleResult || scheduleResult.schedule.length === 0) && (
-                     <div className="col-span-full row-span-full flex items-center justify-center text-center">
+                     <div className="col-start-2 col-span-full row-span-full flex items-center justify-center text-center">
                         <p className="text-muted-foreground">پس از افزودن دروس و تعیین اولویت‌ها، <br /> بهترین برنامه ممکن برای شما اینجا ساخته می‌شود.</p>
                      </div>
                   )}

@@ -279,16 +279,16 @@ export default function CourseScheduler() {
         </Card>
         
         <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="preferences">
+          <AccordionItem value="preferences" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="p-6">
-                  <CardHeader className="p-0">
+              <AccordionTrigger className="p-6 [&[data-state=open]]:border-b">
+                  <CardHeader className="p-0 text-right">
                     <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
                     <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                   </CardHeader>
               </AccordionTrigger>
               <AccordionContent>
-                <CardContent>
+                <CardContent className="pt-6">
                     <StudentPreferencesForm
                         preferences={studentPreferences}
                         onPreferencesChange={setStudentPreferences}

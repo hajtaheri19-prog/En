@@ -29,7 +29,7 @@ export default function Home() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex items-center justify-between p-4 border-b">
+        <header className="flex items-center justify-between p-4 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <BookHeart className="h-6 w-6 text-primary hidden sm:flex" />
