@@ -16,7 +16,7 @@ export interface Course {
 
 export interface StudentPreferences {
     preferDayOff?: string;
-    preferMorningClasses?: boolean;
+    shiftPreference?: "больше-утром" | "больше-днем" | "меньше-утром" | "меньше-днем" | "";
     instructorPreferences: {
         courseCode: string;
         instructorId: string;

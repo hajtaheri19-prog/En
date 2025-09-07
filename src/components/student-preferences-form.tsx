@@ -21,13 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { INSTRUCTORS } from "@/lib/mock-data";
 import { Trash2 } from "lucide-react";
 
 const preferencesSchema = z.object({
   preferDayOff: z.string().optional(),
-  preferMorningClasses: z.boolean().optional(),
+  shiftPreference: z.enum(["больше-утром", "больше-днем", "меньше-утром", "меньше-днем", ""]).optional(),
   instructorPreferences: z.array(z.object({
     courseCode: z.string().nonempty("انتخاب درس الزامی است."),
     instructorId: z.string().nonempty("انتخاب استاد الزامی است."),
@@ -46,7 +44,10 @@ interface StudentPreferencesFormProps {
 export default function StudentPreferencesForm({ preferences, onPreferencesChange, generalCourses, isProcessing }: StudentPreferencesFormProps) {
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
-    defaultValues: preferences,
+    defaultValues: {
+      ...preferences,
+      shiftPreference: preferences.shiftPreference || "",
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -98,22 +99,25 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
         />
         <FormField
           control={form.control}
-          name="preferMorningClasses"
+          name="shiftPreference"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel>شیفت کلاس‌ها</FormLabel>
-                <FormDescription>
-                  کلاس‌های صبح (قبل از ۱۲) را ترجیح می‌دهید؟
-                </FormDescription>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={isProcessing}
-                />
-              </FormControl>
+            <FormItem>
+              <FormLabel>ترجیح شیفت کلاس‌ها</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={isProcessing}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="ترجیح خود را انتخاب کنید (اختیاری)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="больше-утром">بیشتر کلاس‌ها صبح</SelectItem>
+                  <SelectItem value="больше-днем">بیشتر کلاس‌ها عصر</SelectItem>
+                  <SelectItem value="меньше-утром">کمتر کلاس صبح</SelectItem>
+                  <SelectItem value="меньше-днем">کمتر کلاس عصر</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>به هوش مصنوعی بگویید کلاس‌های صبح را ترجیح می‌دهید یا عصر.</FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />

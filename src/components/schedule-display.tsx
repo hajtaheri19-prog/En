@@ -1,11 +1,23 @@
 "use client";
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
-import { AlertCircle, CalendarDays, Lightbulb, Group } from "lucide-react";
+import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
+import { Button } from "./ui/button";
+import { useRef, useCallback } from "react";
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
+import Papa from 'papaparse';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 
 interface ScheduleDisplayProps {
   scheduleResult: SuggestOptimalScheduleOutput | null;
@@ -61,6 +73,50 @@ const getGridPosition = (timeslot: string) => {
 
 
 export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleDisplayProps) {
+  const scheduleRef = useRef<HTMLDivElement>(null);
+
+  const downloadAsPng = useCallback(() => {
+    if (scheduleRef.current === null) return;
+    toPng(scheduleRef.current, { cacheBust: true })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = 'schedule.png';
+        link.href = dataUrl;
+        link.click();
+      })
+      .catch((err) => console.error(err));
+  }, [scheduleRef]);
+
+  const downloadAsPdf = useCallback(() => {
+    if (scheduleRef.current === null) return;
+    toPng(scheduleRef.current, { cacheBust: true })
+      .then((dataUrl) => {
+        const pdf = new jsPDF('landscape', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
+        pdf.addImage(dataUrl, 'PNG', 0, 0, scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight);
+        pdf.save('schedule.pdf');
+      })
+      .catch((err) => console.error(err));
+  }, [scheduleRef]);
+
+  const downloadAsCsv = useCallback(() => {
+    if (!scheduleResult || scheduleResult.schedule.length === 0) return;
+    const csvData = scheduleResult.schedule.map(item => ({
+      'نام درس': item.courseName,
+      'کد درس': item.courseCode,
+      'استاد': item.instructor,
+      'زمان': item.timeslot,
+      'مکان': item.location,
+      'گروه': item.group || '',
+    }));
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'schedule.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [scheduleResult]);
 
   const renderScheduleItems = () => {
     if (!scheduleResult || scheduleResult.schedule.length === 0) {
@@ -124,19 +180,45 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
 
   return (
     <Card className="shadow-lg h-full sticky top-8">
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2">
-          <CalendarDays className="ml-2" />
-          برنامه هفتگی پیشنهادی
-        </CardTitle>
-        <CardDescription>برنامه بهینه پیشنهاد شده توسط هوش مصنوعی در اینجا نمایش داده می‌شود.</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+            <CardTitle className="font-headline flex items-center gap-2">
+            <CalendarDays className="ml-2" />
+            برنامه هفتگی پیشنهادی
+            </CardTitle>
+            <CardDescription>برنامه بهینه پیشنهاد شده توسط هوش مصنوعی در اینجا نمایش داده می‌شود.</CardDescription>
+        </div>
+         {scheduleResult && !isLoading && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="ml-2 h-4 w-4" />
+                  خروجی
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadAsPng}>
+                  <ImageDown className="ml-2 h-4 w-4" />
+                  ذخیره به صورت عکس (PNG)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={downloadAsPdf}>
+                  <FileDown className="ml-2 h-4 w-4" />
+                  ذخیره به صورت PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={downloadAsCsv}>
+                  <ExcelIcon className="ml-2 h-4 w-4" />
+                  ذخیره به صورت اکسل (CSV)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
           renderSkeleton()
         ) : (
           <>
-             <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,40px)] gap-0 w-full bg-card rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,40px)] gap-0 w-full bg-card rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
                 {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card border-b">{day}</div>)}
