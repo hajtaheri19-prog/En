@@ -11,4 +11,5 @@ export const INSTRUCTORS: Record<string, Instructor> = {
   "karimi": { id: "دکتر-کریمی", name: "دکتر کریمی" },
 };
 
+// This is now empty by default, user adds courses manually or via PDF.
 export const COURSES: Course[] = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -21,20 +21,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Course } from "@/types";
-import { INSTRUCTORS } from "@/lib/mock-data";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "نام درس باید حداقل ۲ حرف باشد." }),
   code: z.string().min(3, { message: "کد درس باید حداقل ۳ حرف باشد." }),
-  instructorId: z.string({ required_error: "انتخاب استاد الزامی است." }),
+  instructorName: z.string().min(2, { message: "نام استاد باید حداقل ۲ حرف باشد." }),
   category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"], {
     required_error: "انتخاب دسته‌بندی الزامی است.",
   }),
-  timeslot: z.string().regex(/^[^\s]+\s\d{1,2}:\d{2}-\d{1,2}:\d{2}$/, {
-    message: 'فرمت زمان باید "روز ساعت شروع-ساعت پایان" باشد (مثال: شنبه 10:00-12:00)',
-  }),
-  location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+  schedule: z.array(z.object({
+    timeslot: z.string().regex(/^[^\s]+\s\d{1,2}:\d{2}-\d{1,2}:\d{2}$/, {
+      message: 'فرمت زمان باید "روز ساعت شروع-ساعت پایان" باشد (مثال: شنبه 10:00-12:00)',
+    }),
+    location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+  })).min(1, "حداقل یک زمان‌بندی برای درس مورد نیاز است."),
   group: z.string().optional(),
 });
 
@@ -51,26 +52,27 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
     defaultValues: {
       name: "",
       code: "",
-      timeslot: "",
-      location: "",
+      instructorName: "",
+      schedule: [{ timeslot: "", location: "" }],
       group: "",
     },
   });
 
-  function onSubmit(values: AddCourseFormValues) {
-    const instructor = Object.values(INSTRUCTORS).find(inst => inst.id === values.instructorId);
-    if (!instructor) {
-        console.error("استاد انتخاب شده نامعتبر است.");
-        return;
-    }
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "schedule"
+  });
 
+  function onSubmit(values: AddCourseFormValues) {
+    const instructorId = values.instructorName.replace(/\s+/g, '-').toLowerCase();
+    
     const newCourse: Omit<Course, "id"> = {
       name: values.name,
       code: values.code,
-      instructors: [instructor],
+      instructors: [{ id: instructorId, name: values.instructorName }],
       category: values.category,
-      timeslot: values.timeslot,
-      location: values.location,
+      timeslots: values.schedule.map(s => s.timeslot),
+      locations: values.schedule.map(s => s.location),
       group: values.group || undefined,
     };
     onAddCourse(newCourse);
@@ -110,22 +112,13 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
         </div>
         <FormField
           control={form.control}
-          name="instructorId"
+          name="instructorName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>استاد</FormLabel>
-               <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="یک استاد را انتخاب کنید" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.values(INSTRUCTORS).map(inst => (
-                     <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>نام استاد</FormLabel>
+              <FormControl>
+                <Input placeholder="مثال: دکتر احمدی" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -168,32 +161,52 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
             )}
           />
         </div>
-         <FormField
-          control={form.control}
-          name="timeslot"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>زمان کلاس</FormLabel>
-              <FormControl>
-                <Input placeholder="مثال: شنبه 14:00-16:00" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>مکان کلاس</FormLabel>
-              <FormControl>
-                <Input placeholder="مثال: کلاس 201" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
+        <div className="space-y-4">
+          <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
+               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                 <FormField
+                  control={form.control}
+                  name={`schedule.${index}.timeslot`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">زمان کلاس</FormLabel>
+                      <FormControl>
+                        <Input placeholder="شنبه 14:00-16:00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name={`schedule.${index}.location`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">مکان کلاس</FormLabel>
+                      <FormControl>
+                        <Input placeholder="کلاس 201" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+               </div>
+               {fields.length > 1 && (
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={() => append({ timeslot: "", location: "" })}>
+            افزودن زمان دیگر
+          </Button>
+          <FormMessage>{form.formState.errors.schedule?.message}</FormMessage>
+        </div>
+        
         <Button type="submit" className="w-full" disabled={isProcessing}>
           <PlusCircle className="ml-2 h-4 w-4" />
           افزودن درس

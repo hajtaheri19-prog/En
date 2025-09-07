@@ -141,34 +141,39 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
       return null;
     }
     
-    return scheduleResult.schedule.map((item, index) => {
-      const pos = getGridPosition(item.timeslot);
-      if (!pos) return null;
-      
-       const colorClasses = [
-        "bg-sky-100 border-sky-200 text-sky-800 dark:bg-sky-900/50 dark:border-sky-800 dark:text-sky-200",
-        "bg-teal-100 border-teal-200 text-teal-800 dark:bg-teal-900/50 dark:border-teal-800 dark:text-teal-200",
-        "bg-amber-100 border-amber-200 text-amber-800 dark:bg-amber-900/50 dark:border-amber-800 dark:text-amber-200",
-        "bg-violet-100 border-violet-200 text-violet-800 dark:bg-violet-900/50 dark:border-violet-800 dark:text-violet-200",
-        "bg-rose-100 border-rose-200 text-rose-800 dark:bg-rose-900/50 dark:border-rose-800 dark:text-rose-200",
-        "bg-cyan-100 border-cyan-200 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-800 dark:text-cyan-200",
-        "bg-lime-100 border-lime-200 text-lime-800 dark:bg-lime-900/50 dark:border-lime-800 dark:text-lime-200",
-        "bg-pink-100 border-pink-200 text-pink-800 dark:bg-pink-900/50 dark:border-pink-800 dark:text-pink-200",
-      ];
-      
-      const courseColorIndex = Math.floor(Math.random() * colorClasses.length);
+    return scheduleResult.schedule.flatMap((item, index) => {
+      const timeslots = Array.isArray(item.timeslot) ? item.timeslot : [item.timeslot];
+      const locations = Array.isArray(item.location) ? item.location : [item.location];
 
-      return (
-        <div
-          key={index}
-          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColorIndex]}`}
-          style={{ gridColumn: pos.gridColumn, gridRow: pos.gridRow }}
-        >
-          <p className="font-bold">{item.courseName}</p>
-          <p className="text-xs opacity-80">{item.instructor}</p>
-          <p className="text-xs opacity-60 mt-1">{item.location}</p>
-        </div>
-      );
+      return timeslots.map((ts, tsIndex) => {
+        const pos = getGridPosition(ts);
+        if (!pos) return null;
+        
+        const colorClasses = [
+          "bg-sky-100 border-sky-200 text-sky-800 dark:bg-sky-900/50 dark:border-sky-800 dark:text-sky-200",
+          "bg-teal-100 border-teal-200 text-teal-800 dark:bg-teal-900/50 dark:border-teal-800 dark:text-teal-200",
+          "bg-amber-100 border-amber-200 text-amber-800 dark:bg-amber-900/50 dark:border-amber-800 dark:text-amber-200",
+          "bg-violet-100 border-violet-200 text-violet-800 dark:bg-violet-900/50 dark:border-violet-800 dark:text-violet-200",
+          "bg-rose-100 border-rose-200 text-rose-800 dark:bg-rose-900/50 dark:border-rose-800 dark:text-rose-200",
+          "bg-cyan-100 border-cyan-200 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-800 dark:text-cyan-200",
+          "bg-lime-100 border-lime-200 text-lime-800 dark:bg-lime-900/50 dark:border-lime-800 dark:text-lime-200",
+          "bg-pink-100 border-pink-200 text-pink-800 dark:bg-pink-900/50 dark:border-pink-800 dark:text-pink-200",
+        ];
+        
+        const courseColorIndex = (item.courseCode.charCodeAt(0) + index) % colorClasses.length;
+
+        return (
+          <div
+            key={`${index}-${tsIndex}`}
+            className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColorIndex]}`}
+            style={{ gridColumn: pos.gridColumn, gridRow: pos.gridRow }}
+          >
+            <p className="font-bold">{item.courseName}</p>
+            <p className="text-xs opacity-80">{item.instructor}</p>
+            <p className="text-xs opacity-60 mt-1">{locations[tsIndex] || item.location}</p>
+          </div>
+        );
+      });
     });
   };
 

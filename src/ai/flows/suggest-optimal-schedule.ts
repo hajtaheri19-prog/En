@@ -18,8 +18,8 @@ const CourseSchema = z.object({
   name: z.string(),
   instructors: z.array(z.object({ id: z.string(), name: z.string() })),
   category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"]),
-  timeslot: z.string(),
-  location: z.string(),
+  timeslots: z.array(z.string()),
+  locations: z.array(z.string()),
   group: z.string().optional(),
 });
 
@@ -49,8 +49,8 @@ const SuggestOptimalScheduleOutputSchema = z.object({
         courseCode: z.string().describe('کد درس برنامه‌ریزی شده.'),
         courseName: z.string().describe('نام درس برنامه‌ریزی شده.'),
         instructor: z.string().describe('نام استاد تخصیص داده شده.'),
-        timeslot: z.string().describe('بازه زمانی برای درس.'),
-        location: z.string().describe('مکان برگزاری کلاس.'),
+        timeslot: z.union([z.string(), z.array(z.string())]).describe('بازه زمانی برای درس.'),
+        location: z.union([z.string(), z.array(z.string())]).describe('مکان برگزاری کلاس.'),
         group: z.string().optional().describe('گروه درس.')
       })
     )
@@ -89,7 +89,7 @@ const suggestOptimalSchedulePrompt = ai.definePrompt({
   اطلاعات ورودی:
   - **تمام دروس موجود**:
     {{#each availableCourses}}
-    - {{this.name}} ({{this.code}}), گروه: {{this.group}}, زمان: {{this.timeslot}}, استاد: {{#each this.instructors}}{{this.name}}{{/each}}
+    - {{this.name}} ({{this.code}}), گروه: {{this.group}}, زمان: {{#each this.timeslots}}{{this}}{{/each}}, استاد: {{#each this.instructors}}{{this.name}}{{/each}}
     {{/each}}
   - **اولویت‌های دانشجو**:
     - روز تعطیل دلخواه: {{studentPreferences.preferDayOff}}
@@ -104,7 +104,7 @@ const suggestOptimalSchedulePrompt = ai.definePrompt({
   2.  **انتخاب بهترین گروه:** گروهی را انتخاب کنید که بیشترین تطابق را با اولویت‌های دانشجو دارد (روز خالی، ترجیح شیفت).
   3.  **اضافه کردن دروس عمومی:** بهترین گزینه از دروس عمومی را (بر اساس اولویت استاد و عدم تداخل زمانی) به برنامه گروه منتخب اضافه کنید.
   4.  **ایجاد برنامه نهایی:** یک برنامه کامل و بدون تداخل ایجاد کنید.
-  5.  **ارائه خروجی:** خروجی را در قالب یک شیء JSON با ساختار مشخص شده ارائه دهید. حتماً 'recommendedGroup' و 'rationale' (دلیل انتخاب) را پر کنید.
+  5.  **ارائه خروجی:** خروجی را در قالب یک شیء JSON با ساختار مشخص شده ارائه دهید. حتماً \'recommendedGroup\' و \'rationale\' (دلیل انتخاب) را پر کنید.
 
   مثال برای 'rationale': "گروه ۵ انتخاب شد زیرا روز چهارشنبه کاملاً خالی است و بیشتر کلاس‌ها در نوبت صبح برگزار می‌شوند که با اولویت شما مطابقت دارد. همچنین، درس عمومی معارف اسلامی با استاد ترجیحی شما، دکتر احمدی، بدون تداخل زمانی به برنامه اضافه شد."
   `,
@@ -119,6 +119,14 @@ const suggestOptimalScheduleFlow = ai.defineFlow(
   async input => {
     // Here you could add more complex logic to pre-process courses or groups if needed.
     const {output} = await suggestOptimalSchedulePrompt(input);
+    // Ensure timeslot and location are arrays for consistency
+    if (output && output.schedule) {
+        output.schedule = output.schedule.map(item => ({
+            ...item,
+            timeslot: Array.isArray(item.timeslot) ? item.timeslot : [item.timeslot],
+            location: Array.isArray(item.location) ? item.location : [item.location],
+        }));
+    }
     return output!;
   }
 );

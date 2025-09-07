@@ -130,7 +130,7 @@ export default function CourseScheduler() {
                 (existing) => existing.code === newCourse.code && existing.group === newCourse.group
             )
           );
-          setAvailableCourses(prev => [...prev, ...newCourses]);
+          setAvailableCourses(prev => [...prev, ...newCourses as Course[]]);
           toast({
             title: "استخراج موفق",
             description: `${newCourses.length} درس جدید از فایل PDF استخراج شد.`,
@@ -262,7 +262,7 @@ export default function CourseScheduler() {
                                         <div key={course.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/50">
                                             <div>
                                                 <p className="font-medium text-sm">{course.name} ({course.code})</p>
-                                                <p className="text-xs text-muted-foreground">{course.timeslot}</p>
+                                                <p className="text-xs text-muted-foreground">{course.timeslots.join(', ')}</p>
                                             </div>
                                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveCourse(course.id)}>
                                                 <Trash2 className="h-4 w-4" />

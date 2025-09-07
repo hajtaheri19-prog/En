@@ -9,8 +9,8 @@ export interface Course {
   name: string;
   instructors: Instructor[];
   category: "عمومی" | "تخصصی" | "تربیتی" | "فرهنگی";
-  timeslot: string; // e.g., "شنبه 10:00-12:00"
-  location: string; // e.g., "کلاس ۱۰۱"
+  timeslots: string[]; // e.g., ["شنبه 10:00-12:00", "دوشنبه 10:00-12:00"]
+  locations: string[]; // e.g., ["کلاس ۱۰۱", "کلاس ۱۰۲"]
   group?: string; // e.g., "گروه 5"
 }
 
