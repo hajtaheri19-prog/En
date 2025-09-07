@@ -8,11 +8,11 @@ export default function Home() {
         <div className="inline-flex items-center gap-3">
           <BookHeart className="h-8 w-8 text-primary" />
           <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tighter">
-            KPU Electiva
+            انتخاب واحد هوشمند KPU
           </h1>
         </div>
         <p className="mt-2 text-lg text-muted-foreground">
-          Your Smart Course Selection Assistant for Farhangian University
+          دستیار هوشمند انتخاب واحد شما برای دانشگاه فرهنگیان
         </p>
       </header>
       <CourseScheduler />

@@ -39,8 +39,8 @@ export default function CourseScheduler() {
   const handleGenerateSchedule = () => {
     if (selectedCourses.length === 0) {
       toast({
-        title: "No Courses Selected",
-        description: "Please select at least one course to generate a schedule.",
+        title: "هیچ درسی انتخاب نشده است",
+        description: "لطفاً برای ایجاد برنامه حداقل یک درس را انتخاب کنید.",
         variant: "destructive",
       });
       return;
@@ -53,17 +53,17 @@ export default function CourseScheduler() {
           instructorPreference: instructorPrefs[course.id] ? [instructorPrefs[course.id]] : [],
         })),
         studentId: "S-12345", // Mock data
-        term: "Fall 2024",     // Mock data
+        term: "پاییز ۱۴۰۳",     // Mock data
       };
 
       try {
         const result = await suggestOptimalSchedule(input);
         setScheduleResult(result);
       } catch (error) {
-        console.error("Error generating schedule:", error);
+        console.error("خطا در ایجاد برنامه:", error);
         toast({
-          title: "Error",
-          description: "Failed to generate schedule. Please try again.",
+          title: "خطا",
+          description: "ایجاد برنامه با شکست مواجه شد. لطفاً دوباره تلاش کنید.",
           variant: "destructive",
         });
       }

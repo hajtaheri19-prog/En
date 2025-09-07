@@ -15,19 +15,19 @@ const SuggestOptimalScheduleInputSchema = z.object({
   courseSelections: z
     .array(
       z.object({
-        courseCode: z.string().describe('The code of the selected course.'),
+        courseCode: z.string().describe('کد درس انتخاب شده.'),
         instructorPreference: z
           .array(z.string())
           .describe(
-            'An array of instructor IDs, ordered by preference (most preferred first).'
+            'آرایه‌ای از شناسه‌های اساتید، به ترتیب اولویت (از بیشترین اولویت به کمترین).'
           ),
       })
     )
     .describe(
-      'An array of course selections, each including course code and instructor preferences.'
+      'آرایه‌ای از انتخاب‌های دروس، هر کدام شامل کد درس و اولویت‌های استاد.'
     ),
-  studentId: z.string().describe('The ID of the student.'),
-  term: z.string().describe('The academic term (e.g., Fall 2024).'),
+  studentId: z.string().describe('شناسه دانشجو.'),
+  term: z.string().describe('ترم تحصیلی (مثلاً، پاییز ۱۴۰۳).'),
 });
 export type SuggestOptimalScheduleInput = z.infer<
   typeof SuggestOptimalScheduleInputSchema
@@ -37,21 +37,21 @@ const SuggestOptimalScheduleOutputSchema = z.object({
   schedule: z
     .array(
       z.object({
-        courseCode: z.string().describe('The code of the scheduled course.'),
-        instructor: z.string().describe('The assigned instructor ID.'),
-        timeslot: z.string().describe('The timeslot for the course.'),
+        courseCode: z.string().describe('کد درس برنامه‌ریزی شده.'),
+        instructor: z.string().describe('شناسه استاد تخصیص داده شده.'),
+        timeslot: z.string().describe('بازه زمانی برای درس.'),
       })
     )
-    .describe('The generated optimal course schedule.'),
+    .describe('برنامه درسی بهینه تولید شده.'),
   conflicts: z
     .array(z.string())
     .describe(
-      'An array of course codes that could not be scheduled due to conflicts.'
+      'آرایه‌ای از کدهای دروسی که به دلیل تداخل قابل برنامه‌ریزی نبوده‌اند.'
     ),
   rationale: z
     .string()
     .describe(
-      'A human-readable explanation of why this schedule was chosen as optimal.'
+      'توضیحی قابل خواندن برای انسان در مورد اینکه چرا این برنامه به عنوان بهینه انتخاب شده است.'
     ),
 });
 export type SuggestOptimalScheduleOutput = z.infer<
@@ -68,19 +68,19 @@ const suggestOptimalSchedulePrompt = ai.definePrompt({
   name: 'suggestOptimalSchedulePrompt',
   input: {schema: SuggestOptimalScheduleInputSchema},
   output: {schema: SuggestOptimalScheduleOutputSchema},
-  prompt: `You are an AI assistant designed to generate optimal course schedules for university students.
+  prompt: `شما یک دستیار هوش مصنوعی هستید که برای ایجاد برنامه‌های درسی بهینه برای دانشجویان دانشگاه طراحی شده‌اید. زبان شما فارسی است.
 
-  Consider the following course selections and instructor preferences:
+  انتخاب‌های دروس و اولویت‌های اساتید زیر را در نظر بگیرید:
   {{#each courseSelections}}
-  - Course Code: {{this.courseCode}}, Instructor Preferences: {{this.instructorPreference}}
+  - کد درس: {{this.courseCode}}، اولویت‌های استاد: {{this.instructorPreference}}
   {{/each}}
 
-  Student ID: {{{studentId}}}
-  Term: {{{term}}}
+  شناسه دانشجو: {{{studentId}}}
+  ترم: {{{term}}}
 
-  Generate an optimal course schedule, avoiding any time conflicts and respecting instructor preferences as much as possible.
+  یک برنامه درسی بهینه ایجاد کنید، از هرگونه تداخل زمانی اجتناب کنید و تا حد امکان به اولویت‌های اساتید احترام بگذارید.
 
-  Output the schedule as a JSON object with the following structure:
+  خروجی برنامه را به عنوان یک شیء JSON با ساختار زیر ارائه دهید:
   {
     "schedule": [
       {

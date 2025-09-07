@@ -8,5 +8,5 @@ export interface Course {
   code: string;
   name: string;
   instructors: Instructor[];
-  category: "General" | "Specialized" | "Educational" | "Cultural";
+  category: "عمومی" | "تخصصی" | "تربیتی" | "فرهنگی";
 }

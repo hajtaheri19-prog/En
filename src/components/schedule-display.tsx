@@ -12,18 +12,18 @@ interface ScheduleDisplayProps {
   isLoading: boolean;
 }
 
-const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 const timeSlots = Array.from({ length: 12 }, (_, i) => `${i + 8}:00`); // 8:00 to 19:00
 
 const dayToGridCol = (day: string) => {
-  const d = day.toLowerCase().substring(0, 3);
+  const d = day.toLowerCase();
   switch (d) {
-    case "sat": return 2;
-    case "sun": return 3;
-    case "mon": return 4;
-    case "tue": return 5;
-    case "wed": return 6;
-    case "thu": return 7;
+    case "شنبه": return 2;
+    case "یکشنبه": return 3;
+    case "دوشنبه": return 4;
+    case "سه‌شنبه": return 5;
+    case "چهارشنبه": return 6;
+    case "پنجشنبه": return 7;
     default: return 0;
   }
 };
@@ -55,7 +55,7 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
     if (!scheduleResult || scheduleResult.schedule.length === 0) {
       return (
         <div className="flex items-center justify-center h-full min-h-[400px]">
-          <p className="text-muted-foreground">Your generated schedule will appear here.</p>
+          <p className="text-muted-foreground">برنامه ایجاد شده شما در اینجا نمایش داده می‌شود.</p>
         </div>
       );
     }
@@ -109,8 +109,8 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
     <Card className="shadow-lg h-full">
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
-          <CalendarDays className="text-primary" />
-          Generated Schedule
+          <CalendarDays className="ml-2" />
+          برنامه ایجاد شده
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -121,12 +121,12 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
             <div className="grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(12,1fr)] gap-1 w-full bg-card rounded-lg p-2 border">
               {/* Headers */}
               <div className="p-2"></div>
-              {days.map(day => <div key={day} className="p-2 text-center font-semibold text-muted-foreground text-sm">{day.substring(0,3)}</div>)}
+              {days.map(day => <div key={day} className="p-2 text-center font-semibold text-muted-foreground text-sm">{day}</div>)}
               {/* Time slots and grid lines */}
               {timeSlots.map(time => (
-                <div key={time} className="p-2 text-right font-mono text-muted-foreground text-xs row-start-auto border-r border-dashed">{time}</div>
+                <div key={time} className="p-2 text-left font-mono text-muted-foreground text-xs row-start-auto border-l border-dashed">{time}</div>
               ))}
-              {[...Array(6*12)].map((_, i) => <div key={i} className={`border-r border-b border-dashed ${ (i + 1) % 6 === 0 ? 'border-r-0' : ''}`}></div>)}
+              {[...Array(6*12)].map((_, i) => <div key={i} className={`border-l border-b border-dashed ${ (i) % 6 === 0 ? 'border-l-0' : ''}`}></div>)}
               
               {/* Rendered schedule */}
               {renderSchedule()}
@@ -136,10 +136,10 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
               <div className="mt-6 space-y-4">
                 {scheduleResult.conflicts.length > 0 && (
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="font-headline">Scheduling Conflicts</AlertTitle>
+                    <AlertCircle className="h-4 w-4 ml-2" />
+                    <AlertTitle className="font-headline">تداخل در برنامه</AlertTitle>
                     <AlertDescription>
-                      The following courses could not be scheduled:
+                      دروس زیر به دلیل تداخل قابل برنامه‌ریزی نبودند:
                       <div className="flex flex-wrap gap-2 mt-2">
                         {scheduleResult.conflicts.map(c => <Badge key={c} variant="destructive">{c}</Badge>)}
                       </div>
@@ -148,8 +148,8 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
                 )}
                 {scheduleResult.rationale && (
                    <Alert>
-                    <Lightbulb className="h-4 w-4" />
-                    <AlertTitle className="font-headline">AI Rationale</AlertTitle>
+                    <Lightbulb className="h-4 w-4 ml-2" />
+                    <AlertTitle className="font-headline">منطق هوش مصنوعی</AlertTitle>
                     <AlertDescription>
                       {scheduleResult.rationale}
                     </AlertDescription>

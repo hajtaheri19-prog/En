@@ -68,13 +68,13 @@ export default function CourseSelection({
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
             <BookOpen className="text-primary" />
-            Available Courses
+            دروس موجود
           </CardTitle>
           <CardDescription>
-            Search and add courses to your selection.
+            دروس را جستجو و به انتخاب خود اضافه کنید.
           </CardDescription>
           <Input
-            placeholder="Search by name or code..."
+            placeholder="جستجو بر اساس نام یا کد..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="mt-2"
@@ -99,7 +99,7 @@ export default function CourseSelection({
                     size="sm"
                     onClick={() => onSelectCourse(course)}
                   >
-                    {isCourseSelected(course.id) ? "Selected" : "Add"}
+                    {isCourseSelected(course.id) ? "انتخاب شد" : "افزودن"}
                   </Button>
                 </div>
               ))}
@@ -112,10 +112,10 @@ export default function CourseSelection({
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
             <Users className="text-primary" />
-            My Selection & Preferences
+            انتخاب‌ها و اولویت‌های من
           </CardTitle>
           <CardDescription>
-            Rank your preferred instructors for each course.
+            برای هر درس، استاد مورد نظر خود را اولویت‌بندی کنید.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -133,7 +133,7 @@ export default function CourseSelection({
                       value={instructorPrefs[course.id]}
                     >
                       <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Select Instructor" />
+                        <SelectValue placeholder="انتخاب استاد" />
                       </SelectTrigger>
                       <SelectContent>
                         {course.instructors.map((instructor) => (
@@ -147,7 +147,7 @@ export default function CourseSelection({
                       variant="ghost"
                       size="icon"
                       onClick={() => onSelectCourse(course)}
-                      aria-label={`Remove ${course.name}`}
+                      aria-label={`حذف ${course.name}`}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -158,7 +158,7 @@ export default function CourseSelection({
             ))
           ) : (
             <p className="text-center text-muted-foreground py-8">
-              No courses selected yet.
+              هنوز درسی انتخاب نشده است.
             </p>
           )}
         </CardContent>
@@ -169,8 +169,8 @@ export default function CourseSelection({
               onClick={onGenerateSchedule}
               disabled={isGenerating}
             >
-              <Sparkles className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : "Generate Optimal Schedule"}
+              <Sparkles className="ml-2 h-4 w-4" />
+              {isGenerating ? "در حال ایجاد..." : "ایجاد برنامه بهینه"}
             </Button>
           </CardFooter>
         )}
