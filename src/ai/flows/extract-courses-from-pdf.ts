@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { Course } from '@/types';
 
 const ExtractCoursesFromPdfInputSchema = z.object({
   pdfDataUri: z
@@ -28,10 +27,12 @@ const ExtractedCourseSchema = z.object({
     code: z.string().describe('کد درس (مانند "CS101").'),
     name: z.string().describe('نام کامل درس.'),
     instructors: z.array(z.object({
-        id: z.string().describe('شناسه منحصر به فرد استاد.'),
+        id: z.string().describe('شناسه منحصر به فرد استاد (از نام استاد به صورت کباب-کیس).'),
         name: z.string().describe('نام استاد.')
     })).describe('لیستی از اساتیدی که این درس را تدریس می‌کنند.'),
     category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"]).describe('دسته‌بندی درس.'),
+    timeslot: z.string().describe('زمان برگزاری کلاس (مثال: "شنبه 10:00-12:00").'),
+    location: z.string().describe('مکان برگزاری کلاس (مثال: "کلاس ۱۰۱").'),
 });
 
 const ExtractCoursesFromPdfOutputSchema = z.object({
@@ -59,8 +60,10 @@ const extractCoursesPrompt = ai.definePrompt({
   - نام درس (مانند مبانی علوم کامپیوتر)
   - لیست اساتید موجود برای آن درس
   - دسته‌بندی درس به یکی از چهار نوع: "عمومی"، "تخصصی"، "تربیتی"، "فرهنگی"
+  - زمان برگزاری کلاس (مثال: "شنبه 10:00-12:00")
+  - مکان برگزاری کلاس (مثال: "کلاس ۱۰۱" یا "آنلاین")
 
-  برای هر درس یک شناسه منحصر به فرد (id) ایجاد کنید. همچنین برای هر استاد یک شناسه منحصر به فرد ایجاد کنید.
+  برای هر درس یک شناسه منحصر به فرد (id) ایجاد کنید. برای هر استاد یک شناسه منحصر به فرد (id) با فرمت کباب-کیس (مثلا 'دکتر-احمدی') از روی نام او بسازید.
 
   PDF برای پردازش: {{media url=pdfDataUri}}
 
@@ -71,8 +74,10 @@ const extractCoursesPrompt = ai.definePrompt({
         "id": "cs101_1",
         "code": "CS101",
         "name": "مبانی علوم کامپیوتر",
-        "instructors": [{ "id": "ahmadi", "name": "دکتر احمدی" }],
-        "category": "تخصصی"
+        "instructors": [{ "id": "دکتر-احمدی", "name": "دکتر احمدی" }],
+        "category": "تخصصی",
+        "timeslot": "شنبه 10:00-12:00",
+        "location": "کلاس ۱۰۱"
       }
     ]
   }
