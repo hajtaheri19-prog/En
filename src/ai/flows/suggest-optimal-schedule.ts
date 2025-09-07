@@ -58,7 +58,7 @@ const SuggestOptimalScheduleOutputSchema = z.object({
   conflicts: z
     .array(z.string())
     .describe(
-      'آرایه‌ای از کدهای دروسی که به دلیل تداخل قابل برنامه‌ریzyنبوده‌اند.'
+      'آرایه‌ای از کدهای دروسی که به دلیل تداخل قابل برنامه‌ریزی نبوده‌اند.'
     ),
   rationale: z
     .string()
