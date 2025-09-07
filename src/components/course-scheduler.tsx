@@ -81,9 +81,9 @@ export default function CourseScheduler() {
       startExtractingTransition(async () => {
         try {
           const result = await extractCoursesFromPdf({ pdfDataUri });
-          // Prevent duplicates, merge with existing
+          // Prevent duplicates by checking course code
           const newCourses = result.courses.filter(
-            (newCourse) => !availableCourses.some((existing) => existing.id === newCourse.id)
+            (newCourse) => !availableCourses.some((existing) => existing.code === newCourse.code)
           );
           setAvailableCourses(prev => [...prev, ...newCourses]);
           toast({
@@ -109,6 +109,12 @@ export default function CourseScheduler() {
       });
     };
   };
+  
+  const handleRemoveCourse = (courseId: string) => {
+    setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
+    setSelectedCourses(prev => prev.filter(c => c.id !== courseId));
+  };
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
@@ -121,6 +127,7 @@ export default function CourseScheduler() {
           onSetInstructorPref={handleSetInstructorPref}
           onGenerateSchedule={handleGenerateSchedule}
           onPdfUpload={handlePdfUpload}
+          onRemoveCourse={handleRemoveCourse}
           isGenerating={isGenerating}
           isExtracting={isExtracting}
         />

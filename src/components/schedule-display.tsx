@@ -51,13 +51,9 @@ const getGridPosition = (timeslot: string) => {
 
 export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleDisplayProps) {
 
-  const renderSchedule = () => {
+  const renderScheduleItems = () => {
     if (!scheduleResult || scheduleResult.schedule.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full min-h-[400px]">
-          <p className="text-muted-foreground">برنامه ایجاد شده شما در اینجا نمایش داده می‌شود.</p>
-        </div>
-      );
+      return null;
     }
     
     return scheduleResult.schedule.map((item, index) => {
@@ -66,42 +62,50 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
       
       const { gridColumnStart, gridRowStart, gridRowEnd } = pos;
       
-      const colorClasses = [
-        "bg-blue-100 border-blue-300 text-blue-800",
-        "bg-green-100 border-green-300 text-green-800",
-        "bg-yellow-100 border-yellow-300 text-yellow-800",
-        "bg-purple-100 border-purple-300 text-purple-800",
-        "bg-pink-100 border-pink-300 text-pink-800",
-        "bg-indigo-100 border-indigo-300 text-indigo-800",
+       const colorClasses = [
+        "bg-sky-100 border-sky-200 text-sky-800 dark:bg-sky-900/50 dark:border-sky-800 dark:text-sky-200",
+        "bg-teal-100 border-teal-200 text-teal-800 dark:bg-teal-900/50 dark:border-teal-800 dark:text-teal-200",
+        "bg-amber-100 border-amber-200 text-amber-800 dark:bg-amber-900/50 dark:border-amber-800 dark:text-amber-200",
+        "bg-violet-100 border-violet-200 text-violet-800 dark:bg-violet-900/50 dark:border-violet-800 dark:text-violet-200",
+        "bg-rose-100 border-rose-200 text-rose-800 dark:bg-rose-900/50 dark:border-rose-800 dark:text-rose-200",
+        "bg-cyan-100 border-cyan-200 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-800 dark:text-cyan-200",
       ];
       
       return (
         <div
           key={index}
-          className={`p-2 rounded-lg border text-xs flex flex-col justify-center ${colorClasses[index % colorClasses.length]}`}
+          className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[index % colorClasses.length]}`}
           style={{ gridColumn: gridColumnStart, gridRow: `${gridRowStart} / ${gridRowEnd}` }}
         >
           <p className="font-bold">{item.courseCode}</p>
-          <p className="text-xs">{item.instructor}</p>
+          <p className="text-xs opacity-80">{item.instructor}</p>
         </div>
       );
     });
   };
 
   const renderSkeleton = () => (
-    <div className="grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(12,1fr)] gap-1 w-full min-h-[400px] pointer-events-none">
-       {/* Headers */}
-      <div className="p-2"></div>
-      {days.map(day => <div key={day} className="p-2 text-center font-semibold text-muted-foreground text-sm"><Skeleton className="h-4 w-12 mx-auto" /></div>)}
-      {/* Time slots and grid lines */}
-      {timeSlots.map(time => (
-        <div key={time} className="p-2 text-right font-mono text-muted-foreground text-xs row-start-auto">{time}</div>
+     <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,1fr)] gap-0 w-full min-h-[520px]">
+      {/* Grid structure */}
+      <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
+      {days.map(day => (
+        <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card border-b">
+          <Skeleton className="h-4 w-12 mx-auto" />
+        </div>
       ))}
-      {[...Array(72)].map((_, i) => <div key={i} className="border-r border-b border-dashed"></div>)}
+      {timeSlots.map((time, index) => (
+        <div key={time} className={`row-start-${index + 2} col-span-1 text-left font-mono text-muted-foreground text-xs p-2 pr-4 border-r`}>{time}</div>
+      ))}
+       {[...Array(6 * 12)].map((_, i) => (
+        <div key={i} className="border-r border-b"></div>
+      ))}
       {/* Skeleton blocks */}
-      <Skeleton className="col-start-2 row-start-3 row-end-5 rounded-lg" />
-      <Skeleton className="col-start-4 row-start-4 row-end-6 rounded-lg" />
-      <Skeleton className="col-start-6 row-start-7 row-end-9 rounded-lg" />
+      <div className="absolute inset-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,1fr)] gap-1">
+        <Skeleton className="col-start-2 row-start-3 row-end-5 rounded-lg" />
+        <Skeleton className="col-start-4 row-start-4 row-end-6 rounded-lg" />
+        <Skeleton className="col-start-6 row-start-7 row-end-9 rounded-lg" />
+        <Skeleton className="col-start-3 row-start-8 row-end-10 rounded-lg" />
+      </div>
     </div>
   );
 
@@ -110,7 +114,7 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <CalendarDays className="ml-2" />
-          برنامه ایجاد شده
+          برنامه هفتگی شما
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -118,18 +122,30 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
           renderSkeleton()
         ) : (
           <>
-            <div className="grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(12,1fr)] gap-1 w-full bg-card rounded-lg p-2 border">
-              {/* Headers */}
-              <div className="p-2"></div>
-              {days.map(day => <div key={day} className="p-2 text-center font-semibold text-muted-foreground text-sm">{day}</div>)}
-              {/* Time slots and grid lines */}
-              {timeSlots.map(time => (
-                <div key={time} className="p-2 text-left font-mono text-muted-foreground text-xs row-start-auto border-l border-dashed">{time}</div>
-              ))}
-              {[...Array(6*12)].map((_, i) => <div key={i} className={`border-l border-b border-dashed ${ (i) % 6 === 0 ? 'border-l-0' : ''}`}></div>)}
-              
-              {/* Rendered schedule */}
-              {renderSchedule()}
+             <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,1fr)] gap-0 w-full min-h-[520px] bg-card rounded-lg border">
+                {/* Headers */}
+                <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
+                {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card border-b">{day}</div>)}
+                
+                {/* Time slots */}
+                {timeSlots.map((time, index) => (
+                    <div key={time} className={`row-start-${index + 2} col-span-1 text-left font-mono text-muted-foreground text-xs p-2 pr-4 border-r`}>{time}</div>
+                ))}
+                
+                {/* Grid Lines */}
+                {[...Array(6 * 12)].map((_, i) => (
+                    <div key={i} className="border-r border-b"></div>
+                ))}
+                
+                {/* Schedule Items Container */}
+                <div className="absolute inset-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,1fr)] gap-1">
+                  {(!scheduleResult || scheduleResult.schedule.length === 0) && (
+                     <div className="col-start-2 col-span-6 row-start-2 row-span-12 flex items-center justify-center">
+                        <p className="text-muted-foreground">برنامه ایجاد شده شما در اینجا نمایش داده می‌شود.</p>
+                     </div>
+                  )}
+                  {renderScheduleItems()}
+                </div>
             </div>
 
             {scheduleResult && (

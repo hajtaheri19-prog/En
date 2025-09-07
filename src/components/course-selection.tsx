@@ -2,13 +2,14 @@
 
 import type { Course } from "@/types";
 import {
-  BookOpen,
+  BookPlus,
   FileUp,
   Loader2,
   PlusCircle,
   Sparkles,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 import { Badge } from "./ui/badge";
@@ -41,6 +42,7 @@ interface CourseSelectionProps {
   onSetInstructorPref: (courseId: string, instructorId: string) => void;
   onGenerateSchedule: () => void;
   onPdfUpload: (file: File) => void;
+  onRemoveCourse: (courseId: string) => void;
   isGenerating: boolean;
   isExtracting: boolean;
 }
@@ -53,6 +55,7 @@ export default function CourseSelection({
   onSetInstructorPref,
   onGenerateSchedule,
   onPdfUpload,
+  onRemoveCourse,
   isGenerating,
   isExtracting,
 }: CourseSelectionProps) {
@@ -73,6 +76,8 @@ export default function CourseSelection({
     const file = event.target.files?.[0];
     if (file) {
       onPdfUpload(file);
+      // Reset file input to allow re-uploading the same file
+      event.target.value = "";
     }
   };
 
@@ -81,24 +86,25 @@ export default function CourseSelection({
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
-            <BookOpen className="text-primary" />
-            دروس موجود
+            <BookPlus className="text-primary" />
+            افزودن دروس
           </CardTitle>
           <CardDescription>
-            دروس را جستجو کرده یا از طریق فایل PDF اضافه کنید.
+            دروس را از طریق فایل PDF اضافه کنید یا آن‌ها را جستجو کنید.
           </CardDescription>
           <div className="flex gap-2 mt-2">
             <Input
-              placeholder="جستجو بر اساس نام یا کد..."
+              placeholder="جستجو در دروس اضافه‌شده..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-grow"
-              disabled={isExtracting}
+              disabled={isExtracting || availableCourses.length === 0}
             />
             <Button 
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
               disabled={isExtracting}
+              aria-label="آپلود PDF"
             >
               {isExtracting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -118,29 +124,54 @@ export default function CourseSelection({
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-4">
-              {filteredCourses.map((course) => (
-                <div
-                  key={course.id}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/50"
-                >
-                  <div>
-                    <p className="font-semibold">{course.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {course.code}
+            {availableCourses.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                    <FileUp className="h-10 w-10 mb-4" />
+                    <h3 className="font-semibold mb-1">لیست دروس خالی است</h3>
+                    <p className="text-sm">برای شروع، لطفاً فایل PDF برنامه درسی خود را آپلود کنید.</p>
+                 </div>
+            ) : (
+                <div className="space-y-2">
+                {filteredCourses.map((course) => (
+                    <div
+                    key={course.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-secondary/50 transition-colors"
+                    >
+                    <div className="flex-1">
+                        <p className="font-semibold">{course.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                        {course.code}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={isCourseSelected(course.id) ? "secondary" : "default"}
+                            size="sm"
+                            onClick={() => onSelectCourse(course)}
+                            disabled={isExtracting}
+                        >
+                            {isCourseSelected(course.id) ? "حذف از انتخاب‌ها" : "افزودن به انتخاب‌ها"}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onRemoveCourse(course.id)}
+                            aria-label={`حذف کامل درس ${course.name}`}
+                            className="text-muted-foreground hover:text-destructive"
+                            disabled={isExtracting}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    </div>
+                ))}
+                 {filteredCourses.length === 0 && searchTerm && (
+                    <p className="text-center text-muted-foreground py-8">
+                      درسی با این مشخصات یافت نشد.
                     </p>
-                  </div>
-                  <Button
-                    variant={isCourseSelected(course.id) ? "outline" : "ghost"}
-                    size="sm"
-                    onClick={() => onSelectCourse(course)}
-                    disabled={isExtracting}
-                  >
-                    {isCourseSelected(course.id) ? "انتخاب شد" : "افزودن"}
-                  </Button>
+                )}
                 </div>
-              ))}
-            </div>
+            )}
           </ScrollArea>
         </CardContent>
       </Card>
@@ -185,7 +216,7 @@ export default function CourseSelection({
                       variant="ghost"
                       size="icon"
                       onClick={() => onSelectCourse(course)}
-                      aria-label={`حذف ${course.name}`}
+                      aria-label={`حذف ${course.name} از انتخاب‌ها`}
                        disabled={isGenerating || isExtracting}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -197,7 +228,7 @@ export default function CourseSelection({
             ))
           ) : (
             <p className="text-center text-muted-foreground py-8">
-              هنوز درسی انتخاب نشده است.
+              هنوز درسی برای انتخاب اضافه نکرده‌اید.
             </p>
           )}
         </CardContent>
