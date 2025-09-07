@@ -124,18 +124,19 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
         
         <div className="space-y-4">
             <FormLabel>اولویت استاد برای دروس عمومی</FormLabel>
+            <FormDescription>برای دروسی که گروه مشخصی ندارند (عمومی)، می‌توانید استاد دلخواه خود را مشخص کنید.</FormDescription>
             {fields.map((field, index) => (
-                <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg">
+                <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
                     <FormField
                     control={form.control}
                     name={`instructorPreferences.${index}.courseCode`}
                     render={({ field }) => (
                         <FormItem className="flex-1">
                             <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={isProcessing}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="درس" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue placeholder="درس عمومی" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     {uniqueGeneralCourses.map(course => (
-                                        <SelectItem key={course.id} value={course.code}>{course.name}</SelectItem>
+                                        <SelectItem key={course.id} value={course.code}>{course.name} ({course.code})</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -149,7 +150,7 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
                     render={({ field }) => (
                         <FormItem className="flex-1">
                              <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={isProcessing}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="استاد" /></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger><SelectValue placeholder="استاد ترجیحی" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     {uniqueGeneralInstructors.map(inst => (
                                         <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
@@ -160,7 +161,7 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
                         </FormItem>
                     )}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isProcessing}>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isProcessing} className="shrink-0">
                         <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                 </div>
@@ -177,6 +178,7 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
              {uniqueGeneralCourses.length === 0 && (
                 <p className="text-xs text-muted-foreground">برای تعیین اولویت، ابتدا باید یک درس عمومی اضافه کنید.</p>
             )}
+            <FormMessage>{form.formState.errors.instructorPreferences?.root?.message}</FormMessage>
         </div>
       </form>
     </Form>
