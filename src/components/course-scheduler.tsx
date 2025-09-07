@@ -3,20 +3,22 @@
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { suggestOptimalSchedule } from "@/ai/flows/suggest-optimal-schedule";
 import type { Course } from "@/types";
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
 import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Separator } from "./ui/separator";
 import StudentPreferencesForm from "./student-preferences-form";
 import type { StudentPreferences } from "@/types";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 
 export default function CourseScheduler() {
@@ -26,7 +28,30 @@ export default function CourseScheduler() {
   });
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
   const [isProcessing, startProcessingTransition] = useTransition();
+  const [apiKey, setApiKey] = useState<string>('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem('gemini-api-key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
+      (window as any).__GEMINI_API_KEY__ = storedApiKey;
+    }
+  }, []);
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newApiKey = e.target.value;
+    setApiKey(newApiKey);
+  };
+
+  const handleSaveApiKey = () => {
+    localStorage.setItem('gemini-api-key', apiKey);
+    (window as any).__GEMINI_API_KEY__ = apiKey;
+    toast({
+      title: "کلید API ذخیره شد",
+      description: "کلید API شما برای این جلسه ذخیره شد.",
+    });
+  };
 
   const handleAddCourse = (newCourse: Omit<Course, "id">) => {
     const courseWithId = { ...newCourse, id: `${newCourse.code}-${Math.random()}` };
@@ -38,6 +63,15 @@ export default function CourseScheduler() {
   };
 
   const handleGenerateSchedule = () => {
+    if (!apiKey) {
+       toast({
+        title: "کلید API مورد نیاز است",
+        description: "لطفاً کلید API خود را برای استفاده از هوش مصنوعی وارد کنید.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (availableCourses.length === 0) {
       toast({
         title: "هیچ درسی موجود نیست",
@@ -75,6 +109,15 @@ export default function CourseScheduler() {
   };
 
   const handlePdfUpload = (file: File) => {
+     if (!apiKey) {
+       toast({
+        title: "کلید API مورد نیاز است",
+        description: "لطفاً کلید API خود را برای استخراج دروس از PDF وارد کنید.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -82,7 +125,6 @@ export default function CourseScheduler() {
       startProcessingTransition(async () => {
         try {
           const result = await extractCoursesFromPdf({ pdfDataUri });
-          // Prevent duplicates by checking course code and group
           const newCourses = result.courses.filter(
             (newCourse) => !availableCourses.some(
                 (existing) => existing.code === newCourse.code && existing.group === newCourse.group
@@ -141,6 +183,31 @@ export default function CourseScheduler() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
       <div className="lg:col-span-2 flex flex-col gap-6">
+        
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="api-key">کلید API گوگل</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="کلید Gemini API خود را وارد کنید"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                />
+                <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                برای استفاده از قابلیت‌های هوش مصنوعی، کلید API شما ضروری است.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
@@ -211,20 +278,29 @@ export default function CourseScheduler() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
-                <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <StudentPreferencesForm
-                    preferences={studentPreferences}
-                    onPreferencesChange={setStudentPreferences}
-                    generalCourses={availableCourses.filter(c => c.category === 'عمومی')}
-                    isProcessing={isProcessing}
-                />
-            </CardContent>
-        </Card>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="preferences">
+            <Card className="shadow-lg">
+              <AccordionTrigger className="p-6">
+                  <CardHeader className="p-0">
+                    <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
+                    <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
+                  </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent>
+                    <StudentPreferencesForm
+                        preferences={studentPreferences}
+                        onPreferencesChange={setStudentPreferences}
+                        generalCourses={availableCourses.filter(c => c.category === 'عمومی')}
+                        isProcessing={isProcessing}
+                    />
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+        </Accordion>
+
 
         <Button size="lg" className="w-full shadow-lg" onClick={handleGenerateSchedule} disabled={isProcessing || availableCourses.length === 0}>
            {isProcessing ? (
