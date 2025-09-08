@@ -28,6 +28,7 @@ interface ScheduleDisplayProps {
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
+// Updated to start from 7:00
 const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 7}:00`); // 7:00 to 21:00
 
 const dayToGridCol = (day: string) => {
@@ -39,67 +40,68 @@ const dayToGridCol = (day: string) => {
     case "سه‌شنبه": return 5;
     case "چهارشنبه": return 6;
     case "پنجشنبه": return 7;
-    default: return 0;
+    default: return 0; // Should not happen
   }
 };
 
-const timeToGridRow = (time: string) => {
+// Converts time "HH:mm" to a numerical value representing hours from midnight.
+// e.g., "07:30" -> 7.5, "14:00" -> 14
+const timeToFractionalHour = (time: string): number | null => {
   try {
     const [hourStr, minuteStr] = time.split(":");
     const hour = parseInt(hourStr, 10);
     const minute = parseInt(minuteStr, 10);
-    // 7:00 is row 1. Each row is an hour.
-    // 7:00 -> 1, 7:30 -> 1.5, 8:00 -> 2
-    return (hour - 6) + (minute / 60);
+    if (isNaN(hour) || isNaN(minute)) return null;
+    return hour + minute / 60;
   } catch {
-    return 1;
+    return null;
   }
 };
 
+
+// Robust function to calculate grid positioning
 const getGridPosition = (timeslot: string) => {
   try {
-    const parts = timeslot.split(" ");
+    const parts = timeslot.trim().split(/\s+/);
     if (parts.length < 2) return null;
 
     const day = parts[0];
     const timeRange = parts[1];
     const [startTime, endTime] = timeRange.split("-");
     
+    if (!startTime || !endTime) return null;
+
     const gridColumn = dayToGridCol(day);
+    const startHour = timeToFractionalHour(startTime);
+    const endHour = timeToFractionalHour(endTime);
     
-    const startRowValue = timeToGridRow(startTime);
-    const endRowValue = timeToGridRow(endTime);
+    if (gridColumn === 0 || startHour === null || endHour === null || endHour <= startHour) return null;
 
-    const durationInHours = endRowValue - startRowValue;
+    // Grid starts at 7:00. 1 hour = 1 row.
+    // The first row (for 7:00-8:00) is grid-row-start: 2
+    const gridRowStart = Math.floor(startHour - 7) + 2; 
+    const gridRowEnd = Math.ceil(endHour - 7) + 2;
     
-    if (gridColumn === 0 || !startRowValue || durationInHours <= 0) return null;
-
-    // The grid starts from row 2 (row 1 is for headers).
-    // The time 7:00 corresponds to grid row start 2.
-    // Each hour is a row. 7:00 is top of row 2, 8:00 is top of row 3.
-    // So, row start is Math.floor(startRowValue) + 1
-    const gridRowStart = Math.floor(startRowValue) + 1; // 7:30 (1.5) -> floor(1.5)+1 = 2
+    // Calculate top offset as a percentage of the cell height (1 hour)
+    const topOffsetPercentage = (startHour - Math.floor(startHour)) * 100;
     
-    // The span is how many rows the event covers.
-    const gridRowEnd = Math.ceil(endRowValue) + 1; // 9:00 (3.0) -> ceil(3.0)+1 = 4
-    
-    // The top offset within the starting cell, as a percentage.
-    const topOffsetPercentage = (startRowValue - Math.floor(startRowValue)) * 100;
+    // Calculate height based on duration
+    const durationInHours = endHour - startHour;
     
     return { 
       gridColumn,
-      // CSS grid-row format is start / end
       gridRow: `${gridRowStart} / ${gridRowEnd}`,
-      // The height is based on the exact duration
+      // height is duration * 100% of a cell height, minus 2px for gap
       height: `calc(${durationInHours * 100}% - 2px)`,
-      // The top is based on the offset within the first hour-slot
-      top: `${topOffsetPercentage}%`,
+       // top is the offset from the start of the hour slot
+      top: `${topOffsetPercentage}%`
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
     return null;
   }
 };
+
 
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading }: ScheduleDisplayProps) {
@@ -189,18 +191,18 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           "bg-pink-100 border-pink-200 text-pink-800 dark:bg-pink-900/50 dark:border-pink-800 dark:text-pink-200",
         ];
         
-        const courseColorIndex = (item.courseCode.charCodeAt(0) + index) % colorClasses.length;
+        const courseColorIndex = (item.courseCode.charCodeAt(0) + item.courseCode.length + index) % colorClasses.length;
+        const colorClass = colorClasses[courseColorIndex];
 
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`absolute p-1.5 rounded-md border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)]`}
+            className={`absolute p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)] ${colorClass}`}
             style={{ 
               gridColumn: pos.gridColumn, 
               gridRow: pos.gridRow,
               top: pos.top,
               height: pos.height,
-              backgroundColor: colorClasses[courseColorIndex].split(' ')[0], // Example for dynamic colors
             }}
           >
             <p className="font-bold truncate">{item.courseName}</p>
@@ -213,43 +215,40 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
   };
 
   const renderSkeleton = () => (
-    <div className="p-4">
-        <div className="space-y-3">
-            <Skeleton className="h-8 w-3/5" />
-            <Skeleton className="h-4 w-4/5" />
-        </div>
-        <div className="relative mt-6 grid grid-cols-[auto_repeat(6,1fr)] gap-1 w-full min-h-[520px]">
-            {/* Headers */}
-            {days.map(day => ( <Skeleton key={day} className="h-8 w-full" /> ))}
-            {/* Time slots + Grid */}
-            {[...Array(14)].map((_, i) => (
-                <div key={i} className="col-span-full grid grid-cols-[auto_repeat(6,1fr)] gap-1 mt-1">
-                    <Skeleton className="h-8 w-12" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                </div>
-            ))}
-            {/* Skeleton blocks */}
-            <div className="absolute inset-0 top-10 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(14,1fr)] gap-1">
-                <Skeleton className="col-start-2 row-start-2 row-span-2 rounded-lg" />
-                <Skeleton className="col-start-4 row-start-3 row-span-2 rounded-lg" />
-                <Skeleton className="col-start-6 row-start-6 row-span-2 rounded-lg" />
-                <Skeleton className="col-start-3 row-start-9 row-span-2 rounded-lg" />
-                <Skeleton className="col-start-5 row-start-1 row-span-2 rounded-lg" />
-                 <Skeleton className="col-start-3 row-start-5 row-span-2 rounded-lg" />
-                <Skeleton className="col-start-1 row-start-7 row-span-2 rounded-lg" />
-            </div>
-        </div>
+     <div className="p-4 space-y-4">
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-3/5" />
+        <Skeleton className="h-4 w-4/5" />
+      </div>
+      <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(15,40px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+         {/* Headers */}
+         <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
+         {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card"><Skeleton className="h-5 w-12 mx-auto" /></div>)}
+          {/* Time slots & Grid Lines */}
+         {timeSlots.map((time, index) => (
+           <React.Fragment key={time}>
+            <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}><Skeleton className="h-4 w-10 mx-auto" /></div>
+             {[...Array(6)].map((_, dayIndex) => (
+                <div key={`${index}-${dayIndex}`} className={`row-start-${index + 2} col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
+             ))}
+           </React.Fragment>
+        ))}
+         {/* Skeleton blocks */}
+         <div className="absolute inset-0 top-[50px] left-[60px] right-0 bottom-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
+            <Skeleton className="col-start-2 row-start-2 h-[calc(200%-2px)] rounded-lg" />
+            <Skeleton className="col-start-4 row-start-3 h-[calc(200%-2px)] rounded-lg" />
+            <Skeleton className="col-start-6 row-start-6 h-[calc(200%-2px)] rounded-lg" />
+            <Skeleton className="col-start-3 row-start-9 h-[calc(200%-2px)] rounded-lg" />
+            <Skeleton className="col-start-5 row-start-1 h-[calc(200%-2px)] rounded-lg" />
+            <Skeleton className="col-start-3 row-start-5 h-[calc(200%-2px)] rounded-lg" />
+         </div>
+      </div>
     </div>
   );
 
   return (
     <Card className="shadow-lg h-full sticky top-8">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-start sm:items-center justify-between">
         <div>
             <CardTitle className="font-headline flex items-center gap-2">
             <CalendarDays />
@@ -259,7 +258,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط هوش مصنوعی."}
             </CardDescription>
         </div>
-         {scheduleItems.length > 0 && !isLoading && (
+         {(scheduleItems.length > 0 || isManualMode) && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -284,7 +283,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             </DropdownMenu>
           )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pr-0 sm:pr-6">
         {isLoading ? (
           renderSkeleton()
         ) : (
