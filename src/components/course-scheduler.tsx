@@ -423,12 +423,13 @@ export default function CourseScheduler() {
                                 <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
                                 <div className="space-y-2">
                                     {courses.map(course => (
-                                        <div key={course.id} className="flex items-center justify-between p-2 rounded-lg border bg-secondary/50">
-                                            <div>
+                                        <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
+                                            <div className="flex-1">
                                                 <p className="font-medium text-sm">{course.name} ({course.code})</p>
-                                                <p className="text-xs text-muted-foreground">{course.timeslots.join(', ')}</p>
+                                                <p className="text-xs text-muted-foreground">{course.timeslots.join('، ')}</p>
+                                                <p className="text-xs text-muted-foreground">کلاس: {course.locations.join('، ')}</p>
                                             </div>
-                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveCourse(course.id)}>
+                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => handleRemoveCourse(course.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
