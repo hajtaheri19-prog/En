@@ -250,5 +250,3 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
     </Form>
   );
 }
-
-    
