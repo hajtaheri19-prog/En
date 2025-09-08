@@ -34,6 +34,15 @@ export default function CourseSelection({
     }
   };
 
+  const getButtonText = () => {
+      if (isProcessing) return "در حال پردازش...";
+      if (accept.includes('pdf')) return "انتخاب و آپلود فایل (PDF)";
+      if (accept.includes('csv') || accept.includes('sheet') || accept.includes('excel')) {
+          return "انتخاب و آپلود فایل (اکسل/CSV)";
+      }
+      return "انتخاب و آپلود فایل";
+  }
+
   return (
     <div className="space-y-4">
       <Alert>
@@ -62,7 +71,7 @@ export default function CourseSelection({
           ) : (
             <FileUp className="h-4 w-4 ml-2" />
           )}
-          <span>{isProcessing ? "در حال پردازش..." : `انتخاب و آپلود فایل (${accept.toUpperCase()})`}</span>
+          <span>{getButtonText()}</span>
         </Button>
     </div>
   );

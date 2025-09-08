@@ -20,6 +20,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 
 export default function CourseScheduler() {
@@ -157,70 +158,95 @@ export default function CourseScheduler() {
     };
   };
 
-  const handleCsvUpload = (file: File) => {
-    startProcessingTransition(() => {
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                try {
-                    if (!results.data.length || !results.meta.fields) {
-                        throw new Error('فایل CSV خالی است یا هدر ندارد.');
-                    }
-                    const requiredColumns = ['code', 'name', 'instructorName', 'category', 'timeslots', 'locations'];
-                    const missingColumns = requiredColumns.filter(col => !results.meta.fields!.includes(col));
-                    if (missingColumns.length > 0) {
-                        throw new Error(`فایل CSV ستون‌های الزامی زیر را ندارد: ${missingColumns.join(', ')}`);
-                    }
+  const processAndAddCourses = (data: any[]) => {
+      try {
+          if (!data.length || data.length === 0) {
+              throw new Error('فایل اکسل خالی است یا داده‌ای ندارد.');
+          }
+          const headers = Object.keys(data[0]);
+          const requiredColumns = ['code', 'name', 'instructorName', 'category', 'timeslots', 'locations'];
+          const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+          if (missingColumns.length > 0) {
+              throw new Error(`فایل اکسل ستون‌های الزامی زیر را ندارد: ${missingColumns.join(', ')}`);
+          }
 
-                    const parsedCourses: Omit<Course, "id">[] = results.data.map((row: any) => {
-                        const instructorId = row.instructorName.replace(/\s+/g, '-').toLowerCase();
-                        return {
-                            code: row.code,
-                            name: row.name,
-                            instructors: [{ id: instructorId, name: row.instructorName }],
-                            category: row.category,
-                            timeslots: row.timeslots.split(';').map((s: string) => s.trim()),
-                            locations: row.locations.split(';').map((s: string) => s.trim()),
-                            group: row.group || undefined,
-                        };
-                    });
+          const parsedCourses: Omit<Course, "id">[] = data.map((row: any) => {
+              const instructorId = String(row.instructorName).replace(/\s+/g, '-').toLowerCase();
+              return {
+                  code: String(row.code),
+                  name: String(row.name),
+                  instructors: [{ id: instructorId, name: String(row.instructorName) }],
+                  category: row.category,
+                  timeslots: String(row.timeslots).split(';').map((s: string) => s.trim()),
+                  locations: String(row.locations).split(';').map((s: string) => s.trim()),
+                  group: row.group ? String(row.group) : undefined,
+              };
+          });
 
-                    const coursesWithIds = parsedCourses.map(course => ({
-                        ...course,
-                        id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
-                    }));
+          const coursesWithIds = parsedCourses.map(course => ({
+              ...course,
+              id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
+          }));
 
-                    const newCourses = coursesWithIds.filter(
-                        (newCourse) => !availableCourses.some(
-                            (existing) => existing.code === newCourse.code && existing.group === newCourse.group
-                        )
-                    );
+          const newCourses = coursesWithIds.filter(
+              (newCourse) => !availableCourses.some(
+                  (existing) => existing.code === newCourse.code && existing.group === newCourse.group
+              )
+          );
 
-                    setAvailableCourses(prev => [...prev, ...newCourses]);
-                    toast({
-                        title: "استخراج موفق",
-                        description: `${newCourses.length} درس جدید از فایل CSV استخراج شد.`,
-                    });
-                } catch (error: any) {
-                    console.error("خطا در پردازش CSV:", error);
-                    toast({
-                        title: "خطا در پردازش فایل",
-                        description: error.message || "ساختار فایل CSV صحیح نیست.",
-                        variant: "destructive",
-                    });
-                }
-            },
-            error: (error: any) => {
-                console.error("خطا در پارس کردن CSV:", error);
-                toast({
-                    title: "خطا در آپلود",
-                    description: "پارس کردن فایل CSV با شکست مواجه شد.",
-                    variant: "destructive",
-                });
-            },
-        });
-    });
+          setAvailableCourses(prev => [...prev, ...newCourses]);
+          toast({
+              title: "استخراج موفق",
+              description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد.`,
+          });
+      } catch (error: any) {
+          console.error("خطا در پردازش اکسل:", error);
+          toast({
+              title: "خطا در پردازش فایل",
+              description: error.message || "ساختار فایل اکسل صحیح نیست.",
+              variant: "destructive",
+          });
+      }
+  }
+
+  const handleFileUpload = (file: File) => {
+      startProcessingTransition(() => {
+          const reader = new FileReader();
+          if (file.name.endsWith('.csv')) {
+              reader.onload = (e) => {
+                  const text = e.target?.result as string;
+                  Papa.parse(text, {
+                      header: true,
+                      skipEmptyLines: true,
+                      complete: (results) => processAndAddCourses(results.data),
+                      error: (error: any) => {
+                           toast({
+                              title: "خطا در آپلود",
+                              description: "پارس کردن فایل CSV با شکست مواجه شد.",
+                              variant: "destructive",
+                          });
+                      }
+                  });
+              };
+              reader.readAsText(file);
+          } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+              reader.onload = (e) => {
+                  const data = e.target?.result;
+                  const workbook = XLSX.read(data, { type: 'array' });
+                  const sheetName = workbook.SheetNames[0];
+                  const worksheet = workbook.Sheets[sheetName];
+                  const json = XLSX.utils.sheet_to_json(worksheet);
+                  processAndAddCourses(json);
+              };
+              reader.readAsArrayBuffer(file);
+          } else {
+              toast({
+                  title: "فرمت فایل نامعتبر",
+                  description: "لطفاً یک فایل با فرمت .csv، .xlsx یا .xls آپلود کنید.",
+                  variant: "destructive",
+              });
+          }
+      });
   };
 
   const handleBackup = () => {
@@ -340,14 +366,14 @@ export default function CourseScheduler() {
             <Tabs defaultValue="pdf">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF</TabsTrigger>
-                <TabsTrigger value="csv" disabled={isProcessing}><Sheet className="ml-2" /> CSV</TabsTrigger>
+                <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل/CSV</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
                  <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند." />
               </TabsContent>
-               <TabsContent value="csv" className="pt-4">
-                 <CourseSelection onFileUpload={handleCsvUpload} isProcessing={isProcessing} accept=".csv" title="آپلود چارت درسی (CSV)" description="فایل اکسل (با فرمت CSV) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
+               <TabsContent value="excel" className="pt-4">
+                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
                 <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
