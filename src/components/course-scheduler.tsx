@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -22,6 +22,8 @@ import { Label } from "./ui/label";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Checkbox } from "./ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { Alert, AlertTitle } from "./ui/alert";
 
 
 export default function CourseScheduler() {
@@ -32,17 +34,27 @@ export default function CourseScheduler() {
   });
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
   const [isProcessing, startProcessingTransition] = useTransition();
-  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('AIzaSyA8MPqX6ZOrA6yHVKYDCIgmrJT_CM4GZ9k');
   const { toast } = useToast();
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
+    const providedApiKey = 'AIzaSyA8MPqX6ZOrA6yHVKYDCIgmrJT_CM4GZ9k';
+
     if (storedApiKey) {
       setApiKey(storedApiKey);
       (window as any).__GEMINI_API_KEY__ = storedApiKey;
+    } else if (providedApiKey) {
+       setApiKey(providedApiKey);
+       localStorage.setItem('gemini-api-key', providedApiKey);
+      (window as any).__GEMINI_API_KEY__ = providedApiKey;
+       toast({
+        title: "کلید API تنظیم شد",
+        description: "کلید API شما برای استفاده در این جلسه تنظیم و ذخیره شد.",
+      });
     }
-  }, []);
+  }, [toast]);
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newApiKey = e.target.value;
@@ -59,7 +71,7 @@ export default function CourseScheduler() {
   };
 
   const handleAddCourse = (newCourse: Omit<Course, "id">) => {
-    const courseWithId = { ...newCourse, id: `${newCourse.code}-${Math.random()}` };
+    const courseWithId = { ...newCourse, id: `${newCourse.code}-${Math.random().toString(36).substring(7)}` };
     setAvailableCourses(prev => [...prev, courseWithId]);
     toast({
       title: "درس جدید اضافه شد",
@@ -105,8 +117,8 @@ export default function CourseScheduler() {
       } catch (error) {
         console.error("خطا در ایجاد برنامه:", error);
         toast({
-          title: "خطا",
-          description: "ایجاد برنامه با شکست مواجه شد. لطفاً دوباره تلاش کنید.",
+          title: "خطا در ایجاد برنامه",
+          description: "ایجاد برنامه با شکست مواجه شد. لطفاً کلید API و ورودی‌ها را بررسی کرده و دوباره تلاش کنید.",
           variant: "destructive",
         });
       }
@@ -162,7 +174,7 @@ export default function CourseScheduler() {
 
   const processAndAddCourses = (data: any[]) => {
       try {
-          if (!data.length || data.length === 0) {
+          if (!data || data.length === 0) {
               throw new Error('فایل اکسل خالی است یا داده‌ای ندارد.');
           }
           const headers = Object.keys(data[0]);
@@ -172,7 +184,11 @@ export default function CourseScheduler() {
               throw new Error(`فایل اکسل ستون‌های الزامی زیر را ندارد: ${missingColumns.join(', ')}`);
           }
 
-          const parsedCourses: Omit<Course, "id">[] = data.map((row: any) => {
+          const parsedCourses: Omit<Course, "id">[] = data.map((row: any, index: number) => {
+              if (!row.code || !row.name || !row.instructorName || !row.category || !row.timeslots || !row.locations) {
+                console.warn(`ردیف ${index + 2} در فایل اکسل نادیده گرفته شد چون داده‌های ضروری را نداشت.`);
+                return null;
+              }
               const instructorId = String(row.instructorName).replace(/\s+/g, '-').toLowerCase();
               return {
                   code: String(row.code),
@@ -183,7 +199,7 @@ export default function CourseScheduler() {
                   locations: String(row.locations).split(';').map((s: string) => s.trim()),
                   group: row.group ? String(row.group) : undefined,
               };
-          });
+          }).filter((c): c is Omit<Course, "id"> => c !== null);
 
           const coursesWithIds = parsedCourses.map(course => ({
               ...course,
@@ -220,7 +236,7 @@ export default function CourseScheduler() {
                   Papa.parse(text, {
                       header: true,
                       skipEmptyLines: true,
-                      complete: (results) => processAndAddCourses(results.data),
+                      complete: (results) => processAndAddCourses(results.data as any[]),
                       error: (error: any) => {
                            toast({
                               title: "خطا در آپلود",
@@ -391,14 +407,14 @@ export default function CourseScheduler() {
             <Tabs defaultValue="pdf">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF</TabsTrigger>
-                <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل/CSV</TabsTrigger>
+                <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
                  <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند." />
               </TabsContent>
                <TabsContent value="excel" className="pt-4">
-                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
+                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
                 <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
@@ -416,11 +432,11 @@ export default function CourseScheduler() {
                 </CardDescription>
                  <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
-                        <Save className="ml-2 h-4 w-4" />
+                        <Save className="ml-1 h-4 w-4" />
                         ذخیره
                     </Button>
                      <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing}>
-                        <FolderOpen className="ml-2 h-4 w-4" />
+                        <FolderOpen className="ml-1 h-4 w-4" />
                         بازیابی
                     </Button>
                     <input
@@ -439,7 +455,7 @@ export default function CourseScheduler() {
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
                         <FileUp className="h-10 w-10 mb-4" />
                         <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
-                        <p className="text-sm">برای شروع، یک فایل PDF، CSV یا به صورت دستی درس اضافه کنید.</p>
+                        <p className="text-sm">برای شروع، یک فایل PDF، اکسل یا به صورت دستی درس اضافه کنید.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -449,17 +465,17 @@ export default function CourseScheduler() {
                                 <div className="space-y-2">
                                     {courses.map(course => (
                                         <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
-                                            <div className="flex items-center gap-2 flex-1">
+                                            <div className="flex items-center gap-2 flex-1 overflow-hidden">
                                                 <Checkbox 
                                                   id={`manual-select-${course.id}`}
                                                   checked={manuallySelectedCourseIds.has(course.id)}
                                                   onCheckedChange={(checked) => handleManualCourseSelect(course.id, !!checked)}
                                                   aria-label={`انتخاب درس ${course.name}`}
                                                 />
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-sm">{course.name} ({course.code})</p>
-                                                    <p className="text-xs text-muted-foreground">{course.timeslots.join('، ')}</p>
-                                                    <p className="text-xs text-muted-foreground">کلاس: {course.locations.join('، ')}</p>
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className="font-medium text-sm truncate">{course.name} ({course.code})</p>
+                                                    <p className="text-xs text-muted-foreground truncate">زمان: {course.timeslots.join('، ')}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
                                                 </div>
                                             </div>
                                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => handleRemoveCourse(course.id)}>
@@ -474,10 +490,26 @@ export default function CourseScheduler() {
                 )}
              </ScrollArea>
              {availableCourses.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={handleClearAllCourses} disabled={isProcessing} className="w-full mt-4">
-                    <Trash2 className="ml-2 h-4 w-4" />
-                    پاک کردن همه دروس
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                     <Button variant="destructive" size="sm" disabled={isProcessing} className="w-full mt-4">
+                        <Trash2 className="ml-2 h-4 w-4" />
+                        پاک کردن همه دروس
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>آیا از پاک کردن همه دروس مطمئن هستید؟</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        این عمل قابل بازگشت نیست. تمام دروسی که به صورت دستی یا از طریق فایل وارد کرده‌اید برای همیشه حذف خواهند شد.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>لغو</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearAllCourses}>بله، پاک کن</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
             )}
           </CardContent>
         </Card>
@@ -485,8 +517,8 @@ export default function CourseScheduler() {
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="preferences" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="p-6 [&[data-state=open]]:border-b">
-                  <CardHeader className="p-0 text-right">
+              <AccordionTrigger className="p-6 text-right [&[data-state=open]]:border-b">
+                  <CardHeader className="p-0">
                     <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
                     <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                   </CardHeader>
@@ -523,8 +555,8 @@ export default function CourseScheduler() {
       <div className="lg:col-span-3">
         <Tabs defaultValue="ai-schedule">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-2" /> برنامه پیشنهادی AI</TabsTrigger>
-            <TabsTrigger value="manual-schedule"><Edit className="ml-2" /> برنامه دستی</TabsTrigger>
+            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی AI</TabsTrigger>
+            <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="ai-schedule">
             <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} />
