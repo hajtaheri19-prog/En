@@ -2,7 +2,7 @@
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { suggestOptimalSchedule } from "@/ai/flows/suggest-optimal-schedule";
-import type { Course } from "@/types";
+import type { Course, TimeSlot } from "@/types";
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -35,6 +35,8 @@ export default function CourseScheduler() {
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
   const [isProcessing, startProcessingTransition] = useTransition();
   const [apiKey, setApiKey] = useState<string>('AIzaSyA8MPqX6ZOrA6yHVKYDCIgmrJT_CM4GZ9k');
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [newTimeSlot, setNewTimeSlot] = useState({ name: "", start: "", end: "" });
   const { toast } = useToast();
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,7 +56,16 @@ export default function CourseScheduler() {
         description: "کلید API شما برای استفاده در این جلسه تنظیم و ذخیره شد.",
       });
     }
+
+    const storedTimeSlots = localStorage.getItem('course-time-slots');
+    if(storedTimeSlots) {
+        setTimeSlots(JSON.parse(storedTimeSlots));
+    }
   }, [toast]);
+  
+  useEffect(() => {
+      localStorage.setItem('course-time-slots', JSON.stringify(timeSlots));
+  }, [timeSlots])
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newApiKey = e.target.value;
@@ -369,6 +380,24 @@ export default function CourseScheduler() {
     return groups;
   }, [availableCourses]);
 
+  const handleAddNewTimeSlot = () => {
+      if (!newTimeSlot.name || !newTimeSlot.start || !newTimeSlot.end) {
+          toast({ title: "لطفاً تمام فیلدهای سانس را پر کنید.", variant: "destructive" });
+          return;
+      }
+       if (newTimeSlot.start >= newTimeSlot.end) {
+          toast({ title: "زمان شروع باید قبل از زمان پایان باشد.", variant: "destructive" });
+          return;
+      }
+      setTimeSlots(prev => [...prev, { id: `ts-${Date.now()}`, ...newTimeSlot }]);
+      setNewTimeSlot({ name: "", start: "", end: "" });
+       toast({ title: "سانس جدید با موفقیت اضافه شد.", variant: "default" });
+  }
+  
+  const handleRemoveTimeSlot = (id: string) => {
+      setTimeSlots(prev => prev.filter(ts => ts.id !== id));
+  }
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
@@ -397,6 +426,44 @@ export default function CourseScheduler() {
             </div>
           </CardContent>
         </Card>
+
+         <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌های کلاسی</CardTitle>
+                <CardDescription>بازه‌های زمانی کلاس‌های خود را اینجا تعریف کنید تا در فرم ورود دستی از آنها استفاده کنید.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                        <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
+                        <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="مثال: سانس اول" />
+                    </div>
+                     <div className="flex-1">
+                        <Label htmlFor="ts-start" className="text-xs">شروع</Label>
+                        <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
+                    </div>
+                     <div className="flex-1">
+                        <Label htmlFor="ts-end" className="text-xs">پایان</Label>
+                        <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
+                    </div>
+                    <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                </div>
+                {timeSlots.length > 0 && (
+                    <ScrollArea className="h-24 mt-4 pr-3">
+                        <div className="space-y-2">
+                        {timeSlots.map(ts => (
+                            <div key={ts.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
+                                <p><span className="font-semibold">{ts.name}:</span> {ts.start} - {ts.end}</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveTimeSlot(ts.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                )}
+            </CardContent>
+        </Card>
         
         <Card className="shadow-lg">
           <CardHeader>
@@ -417,7 +484,7 @@ export default function CourseScheduler() {
                  <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
-                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
+                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} timeSlots={timeSlots} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -569,5 +636,3 @@ export default function CourseScheduler() {
     </div>
   );
 }
-
-    

@@ -22,3 +22,10 @@ export interface StudentPreferences {
         instructorId: string;
     }[];
 }
+
+export interface TimeSlot {
+    id: string;
+    name: string;
+    start: string; // "HH:mm"
+    end: string; // "HH:mm"
+}

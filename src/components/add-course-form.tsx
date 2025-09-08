@@ -20,8 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Course } from "@/types";
+import type { Course, TimeSlot } from "@/types";
 import { PlusCircle, Trash2 } from "lucide-react";
+
+const scheduleSchema = z.object({
+  day: z.string().nonempty({ message: "انتخاب روز الزامی است." }),
+  timeSlotId: z.string().nonempty({ message: "انتخاب سانس الزامی است." }),
+  location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "نام درس باید حداقل ۲ حرف باشد." }),
@@ -30,12 +36,7 @@ const formSchema = z.object({
   category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"], {
     required_error: "انتخاب دسته‌بندی الزامی است.",
   }),
-  schedule: z.array(z.object({
-    timeslot: z.string().regex(/^[^\s]+\s\d{1,2}:\d{2}-\d{1,2}:\d{2}$/, {
-      message: 'فرمت زمان باید "روز ساعت شروع-ساعت پایان" باشد (مثال: شنبه 10:00-12:00)',
-    }),
-    location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
-  })).min(1, "حداقل یک زمان‌بندی برای درس مورد نیاز است."),
+  schedule: z.array(scheduleSchema).min(1, "حداقل یک زمان‌بندی برای درس مورد نیاز است."),
   group: z.string().optional(),
 });
 
@@ -44,16 +45,19 @@ type AddCourseFormValues = z.infer<typeof formSchema>;
 interface AddCourseFormProps {
   onAddCourse: (course: Omit<Course, "id">) => void;
   isProcessing: boolean;
+  timeSlots: TimeSlot[];
 }
 
-export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps) {
+const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
+
+export function AddCourseForm({ onAddCourse, isProcessing, timeSlots }: AddCourseFormProps) {
   const form = useForm<AddCourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       code: "",
       instructorName: "",
-      schedule: [{ timeslot: "", location: "" }],
+      schedule: [{ day: "", timeSlotId: "", location: "" }],
       group: "",
     },
   });
@@ -71,7 +75,10 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
       code: values.code,
       instructors: [{ id: instructorId, name: values.instructorName }],
       category: values.category,
-      timeslots: values.schedule.map(s => s.timeslot),
+      timeslots: values.schedule.map(s => {
+        const timeSlot = timeSlots.find(ts => ts.id === s.timeSlotId);
+        return `${s.day} ${timeSlot?.start}-${timeSlot?.end}`
+      }),
       locations: values.schedule.map(s => s.location),
       group: values.group || undefined,
     };
@@ -166,16 +173,35 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
           <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
           {fields.map((field, index) => (
             <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
-               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+               <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                  <FormField
                   control={form.control}
-                  name={`schedule.${index}.timeslot`}
+                  name={`schedule.${index}.day`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">زمان کلاس</FormLabel>
-                      <FormControl>
-                        <Input placeholder="شنبه 14:00-16:00" {...field} />
-                      </FormControl>
+                      <FormLabel className="text-xs">روز هفته</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
+                        <FormControl><SelectTrigger><SelectValue placeholder="انتخاب روز" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                           {daysOfWeek.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name={`schedule.${index}.timeSlotId`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">سانس کلاس</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={timeSlots.length === 0}>
+                        <FormControl><SelectTrigger><SelectValue placeholder={timeSlots.length === 0 ? "اول سانس تعریف کنید" : "انتخاب سانس"} /></SelectTrigger></FormControl>
+                        <SelectContent>
+                           {timeSlots.map(ts => <SelectItem key={ts.id} value={ts.id}>{ts.name} ({ts.start}-{ts.end})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -201,16 +227,17 @@ export function AddCourseForm({ onAddCourse, isProcessing }: AddCourseFormProps)
                 )}
             </div>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => append({ timeslot: "", location: "" })}>
+          <Button type="button" variant="outline" size="sm" onClick={() => append({ day: "", timeSlotId: "", location: "" })}>
             افزودن زمان دیگر
           </Button>
           <FormMessage>{form.formState.errors.schedule?.message}</FormMessage>
         </div>
         
-        <Button type="submit" className="w-full" disabled={isProcessing}>
+        <Button type="submit" className="w-full" disabled={isProcessing || timeSlots.length === 0}>
           <PlusCircle className="ml-2 h-4 w-4" />
           افزودن درس
         </Button>
+        {timeSlots.length === 0 && <p className="text-xs text-destructive text-center">برای افزودن درس، ابتدا باید حداقل یک سانس کلاسی تعریف کنید.</p>}
       </form>
     </Form>
   );
