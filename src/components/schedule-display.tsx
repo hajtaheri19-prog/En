@@ -84,23 +84,21 @@ const getGridPosition = (timeslot: string) => {
     
     if (gridColumn === 0 || startHour === null || endHour === null || endHour <= startHour) return null;
 
-    const gridRowStart = Math.floor(startHour - 7) + 2; 
-    const gridRowEnd = Math.ceil(endHour - 7) + 2;
-    
-    const topOffsetPercentage = (startHour - Math.floor(startHour)) * 100;
-    const durationInHours = endHour - startHour;
-    
+    // Grid row starts at 2 because row 1 is for headers. Base hour is 7:00.
+    const gridRowStart = (startHour - 7) * 2 + 2; // Using half-hour increments for more precision
+    const durationInHalfHours = (endHour - startHour) * 2;
+    const gridRowEnd = gridRowStart + durationInHalfHours;
+
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / ${gridRowEnd}`,
-      height: `calc(${durationInHours * 100}% - 2px)`,
-      top: `${topOffsetPercentage}%`
+      gridRow: `${Math.round(gridRowStart)} / ${Math.round(gridRowEnd)}`,
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
     return null;
   }
 };
+
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
@@ -153,7 +151,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         for (let j = i + 1; j < blocks.length; j++) {
           const block1 = blocks[i];
           const block2 = blocks[j];
-          // Check for overlap
+          // Check for overlap. If start time of one is less than end time of another,
+          // AND end time of one is greater than start time of another, they overlap.
+          // Using strict inequality to prevent back-to-back classes from being marked as conflicts.
           if (block1.start < block2.end && block1.end > block2.start) {
             conflicts.push({
               course1: `${block1.courseName} (${block1.courseCode})`,
@@ -255,8 +255,6 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             style={{ 
               gridColumn: pos.gridColumn, 
               gridRow: pos.gridRow,
-              top: pos.top,
-              height: pos.height,
             }}
           >
             <p className="font-bold truncate">{item.courseName}</p>
@@ -274,27 +272,27 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         <Skeleton className="h-8 w-3/5" />
         <Skeleton className="h-4 w-4/5" />
       </div>
-      <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(15,40px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+      <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
          {/* Headers */}
          <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
          {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card"><Skeleton className="h-5 w-12 mx-auto" /></div>)}
           {/* Time slots & Grid Lines */}
-         {timeSlots.map((time, index) => (
-           <React.Fragment key={time}>
-            <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}><Skeleton className="h-4 w-10 mx-auto" /></div>
+         {Array.from({ length: 15 }).map((_, index) => (
+           <React.Fragment key={`skeleton-time-${index}`}>
+            <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}><Skeleton className="h-4 w-10 mx-auto" /></div>
              {[...Array(6)].map((_, dayIndex) => (
-                <div key={`${index}-${dayIndex}`} className={`row-start-${index + 2} col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
+                <div key={`${index}-${dayIndex}`} className={`row-start-${index * 2 + 2} row-span-2 col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
              ))}
            </React.Fragment>
         ))}
          {/* Skeleton blocks */}
-         <div className="absolute inset-0 top-[50px] left-[60px] right-0 bottom-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
-            <Skeleton className="col-start-2 row-start-2 h-[calc(200%-2px)] rounded-lg" />
-            <Skeleton className="col-start-4 row-start-3 h-[calc(200%-2px)] rounded-lg" />
-            <Skeleton className="col-start-6 row-start-6 h-[calc(200%-2px)] rounded-lg" />
-            <Skeleton className="col-start-3 row-start-9 h-[calc(200%-2px)] rounded-lg" />
-            <Skeleton className="col-start-5 row-start-1 h-[calc(200%-2px)] rounded-lg" />
-            <Skeleton className="col-start-3 row-start-5 h-[calc(200%-2px)] rounded-lg" />
+         <div className="absolute inset-0 top-[50px] left-[60px] right-0 bottom-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(30,20px)] gap-1">
+            <Skeleton className="col-start-2 row-start-2 row-span-4 rounded-lg" />
+            <Skeleton className="col-start-4 row-start-4 row-span-3 rounded-lg" />
+            <Skeleton className="col-start-6 row-start-10 row-span-4 rounded-lg" />
+            <Skeleton className="col-start-3 row-start-16 row-span-3 rounded-lg" />
+            <Skeleton className="col-start-5 row-start-1 row-span-4 rounded-lg" />
+            <Skeleton className="col-start-3 row-start-8 row-span-2 rounded-lg" />
          </div>
       </div>
     </div>
@@ -342,24 +340,24 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           renderSkeleton()
         ) : (
           <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(15,40px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
                 {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
                 
                 {/* Time slots & Grid Lines */}
-                {timeSlots.map((time, index) => (
-                   <React.Fragment key={time}>
-                    <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}>{time}</div>
+                {Array.from({ length: 15 }).map((_, index) => (
+                   <React.Fragment key={`time-${index}`}>
+                    <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}>{`${index + 7}:00`}</div>
                      {[...Array(6)].map((_, dayIndex) => (
-                        <div key={`${index}-${dayIndex}`} className={`row-start-${index + 2} col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
+                        <div key={`${index}-${dayIndex}`} className={`row-start-${index * 2 + 2} row-span-2 col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
                      ))}
                    </React.Fragment>
                 ))}
                 
                 
                 {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[44px] left-[50px] right-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
+                <div className="absolute inset-0 top-[44px] left-[50px] right-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(30,20px)] gap-0.5">
                   {scheduleItems.length === 0 && (
                      <div className="col-start-1 col-span-full row-span-full flex items-center justify-center text-center">
                         <p className="text-muted-foreground">
