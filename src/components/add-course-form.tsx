@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Course, TimeSlot } from "@/types";
+import type { Course, TimeSlot, CourseGroup } from "@/types";
 import { PlusCircle, Trash2 } from "lucide-react";
 
 const scheduleSchema = z.object({
@@ -46,11 +46,12 @@ interface AddCourseFormProps {
   onAddCourse: (course: Omit<Course, "id">) => void;
   isProcessing: boolean;
   timeSlots: TimeSlot[];
+  courseGroups: CourseGroup[];
 }
 
 const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 
-export function AddCourseForm({ onAddCourse, isProcessing, timeSlots }: AddCourseFormProps) {
+export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGroups }: AddCourseFormProps) {
   const form = useForm<AddCourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -159,10 +160,17 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots }: AddCours
             name="group"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>گروه (اختیاری)</FormLabel>
-                <FormControl>
-                  <Input placeholder="مثال: گروه 5" {...field} />
-                </FormControl>
+                <FormLabel>گروه</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={courseGroups.length === 0}>
+                   <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={courseGroups.length === 0 ? "اول گروه تعریف کنید" : "انتخاب گروه (اختیاری)"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {courseGroups.map(cg => <SelectItem key={cg.id} value={cg.name}>{cg.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -242,3 +250,5 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots }: AddCours
     </Form>
   );
 }
+
+    

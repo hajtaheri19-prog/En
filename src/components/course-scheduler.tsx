@@ -2,7 +2,7 @@
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { suggestOptimalSchedule } from "@/ai/flows/suggest-optimal-schedule";
-import type { Course, TimeSlot } from "@/types";
+import type { Course, TimeSlot, CourseGroup } from "@/types";
 import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
@@ -34,9 +34,11 @@ export default function CourseScheduler() {
   });
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
   const [isProcessing, startProcessingTransition] = useTransition();
-  const [apiKey, setApiKey] = useState<string>('AIzaSyA8MPqX6ZOrA6yHVKYDCIgmrJT_CM4GZ9k');
+  const [apiKey, setApiKey] = useState<string>('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [newTimeSlot, setNewTimeSlot] = useState({ name: "", start: "", end: "" });
+  const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
+  const [newCourseGroup, setNewCourseGroup] = useState("");
   const { toast } = useToast();
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,11 +63,20 @@ export default function CourseScheduler() {
     if(storedTimeSlots) {
         setTimeSlots(JSON.parse(storedTimeSlots));
     }
+    const storedCourseGroups = localStorage.getItem('course-groups');
+    if(storedCourseGroups) {
+        setCourseGroups(JSON.parse(storedCourseGroups));
+    }
   }, [toast]);
   
   useEffect(() => {
       localStorage.setItem('course-time-slots', JSON.stringify(timeSlots));
   }, [timeSlots])
+
+  useEffect(() => {
+    localStorage.setItem('course-groups', JSON.stringify(courseGroups));
+  }, [courseGroups])
+
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newApiKey = e.target.value;
@@ -368,7 +379,7 @@ export default function CourseScheduler() {
   }, [availableCourses, manuallySelectedCourseIds]);
 
 
-  const courseGroups = useMemo(() => {
+  const courseGroupsByName = useMemo(() => {
     const groups: Record<string, Course[]> = {};
     availableCourses.forEach(course => {
         const groupKey = course.group || 'عمومی/بدون گروه';
@@ -396,6 +407,20 @@ export default function CourseScheduler() {
   
   const handleRemoveTimeSlot = (id: string) => {
       setTimeSlots(prev => prev.filter(ts => ts.id !== id));
+  }
+
+  const handleAddNewCourseGroup = () => {
+    if (!newCourseGroup.trim()) {
+        toast({ title: "نام گروه درسی نمی‌تواند خالی باشد.", variant: "destructive" });
+        return;
+    }
+    setCourseGroups(prev => [...prev, { id: `cg-${Date.now()}`, name: newCourseGroup.trim() }]);
+    setNewCourseGroup("");
+    toast({ title: "گروه درسی جدید اضافه شد.", variant: "default" });
+  }
+
+  const handleRemoveCourseGroup = (id: string) => {
+      setCourseGroups(prev => prev.filter(cg => cg.id !== id));
   }
 
 
@@ -427,43 +452,75 @@ export default function CourseScheduler() {
           </CardContent>
         </Card>
 
-         <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌های کلاسی</CardTitle>
-                <CardDescription>بازه‌های زمانی کلاس‌های خود را اینجا تعریف کنید تا در فرم ورود دستی از آنها استفاده کنید.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                        <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
-                        <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="مثال: سانس اول" />
-                    </div>
-                     <div className="flex-1">
-                        <Label htmlFor="ts-start" className="text-xs">شروع</Label>
-                        <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
-                    </div>
-                     <div className="flex-1">
-                        <Label htmlFor="ts-end" className="text-xs">پایان</Label>
-                        <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
-                    </div>
-                    <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
-                </div>
-                {timeSlots.length > 0 && (
-                    <ScrollArea className="h-24 mt-4 pr-3">
-                        <div className="space-y-2">
-                        {timeSlots.map(ts => (
-                            <div key={ts.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
-                                <p><span className="font-semibold">{ts.name}:</span> {ts.start} - {ts.end}</p>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveTimeSlot(ts.id)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                            </div>
-                        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
+                    <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                            <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
+                            <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
                         </div>
-                    </ScrollArea>
-                )}
-            </CardContent>
-        </Card>
+                        <div className="w-24">
+                            <Label htmlFor="ts-start" className="text-xs">شروع</Label>
+                            <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
+                        </div>
+                        <div className="w-24">
+                            <Label htmlFor="ts-end" className="text-xs">پایان</Label>
+                            <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
+                        </div>
+                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                    </div>
+                    {timeSlots.length > 0 && (
+                        <ScrollArea className="h-24 mt-4 pr-3">
+                            <div className="space-y-2">
+                            {timeSlots.map(ts => (
+                                <div key={ts.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
+                                    <p><span className="font-semibold">{ts.name}:</span> {ts.start} - {ts.end}</p>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveTimeSlot(ts.id)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
+                    <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                            <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
+                            <Input id="cg-name" value={newCourseGroup} onChange={e => setNewCourseGroup(e.target.value)} placeholder="مثال: گروه ۱" />
+                        </div>
+                        <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                    </div>
+                    {courseGroups.length > 0 && (
+                        <ScrollArea className="h-24 mt-4 pr-3">
+                            <div className="space-y-2">
+                            {courseGroups.map(cg => (
+                                <div key={cg.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
+                                    <p className="font-semibold">{cg.name}</p>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveCourseGroup(cg.id)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
         
         <Card className="shadow-lg">
           <CardHeader>
@@ -484,7 +541,7 @@ export default function CourseScheduler() {
                  <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
-                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} timeSlots={timeSlots} />
+                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} timeSlots={timeSlots} courseGroups={courseGroups} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -495,7 +552,7 @@ export default function CourseScheduler() {
             <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
              <div className="flex justify-between items-center">
                 <CardDescription>
-                    {availableCourses.length} درس در {Object.keys(courseGroups).length} گروه
+                    {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                 </CardDescription>
                  <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
@@ -526,7 +583,7 @@ export default function CourseScheduler() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {Object.entries(courseGroups).map(([groupName, courses]) => (
+                        {Object.entries(courseGroupsByName).map(([groupName, courses]) => (
                             <div key={groupName}>
                                 <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
                                 <div className="space-y-2">
@@ -636,3 +693,5 @@ export default function CourseScheduler() {
     </div>
   );
 }
+
+    

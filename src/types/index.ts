@@ -29,3 +29,10 @@ export interface TimeSlot {
     start: string; // "HH:mm"
     end: string; // "HH:mm"
 }
+
+export interface CourseGroup {
+    id: string;
+    name: string;
+}
+
+    
