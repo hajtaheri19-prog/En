@@ -153,7 +153,6 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           const block2 = blocks[j];
           // Check for overlap. If start time of one is less than end time of another,
           // AND end time of one is greater than start time of another, they overlap.
-          // Using strict inequality to prevent back-to-back classes from being marked as conflicts.
           if (block1.start < block2.end && block1.end > block2.start) {
             conflicts.push({
               course1: `${block1.courseName} (${block1.courseCode})`,
@@ -223,7 +222,16 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const renderScheduleItems = () => {
     if (scheduleItems.length === 0) {
-      return null;
+      return (
+         <div className="col-start-1 col-span-full row-start-2 row-span-full flex items-center justify-center text-center">
+            <p className="text-muted-foreground">
+                {isManualMode
+                    ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
+                    : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
+                }
+            </p>
+         </div>
+      );
     }
     
     return scheduleItems.flatMap((item, index) => {
@@ -251,7 +259,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`absolute p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)] ${colorClass}`}
+            className={`absolute p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-full ${colorClass}`}
             style={{ 
               gridColumn: pos.gridColumn, 
               gridRow: pos.gridRow,
@@ -340,7 +348,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           renderSkeleton()
         ) : (
           <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] w-full bg-card p-4 rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
                 {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
@@ -348,7 +356,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {/* Time slots & Grid Lines */}
                 {Array.from({ length: 15 }).map((_, index) => (
                    <React.Fragment key={`time-${index}`}>
-                    <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}>{`${index + 7}:00`}</div>
+                    <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start -translate-y-2`}>{`${index + 7}:00`}</div>
                      {[...Array(6)].map((_, dayIndex) => (
                         <div key={`${index}-${dayIndex}`} className={`row-start-${index * 2 + 2} row-span-2 col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
                      ))}
@@ -356,20 +364,8 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 ))}
                 
                 
-                {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[44px] left-[50px] right-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(30,20px)] gap-0.5">
-                  {scheduleItems.length === 0 && (
-                     <div className="col-start-1 col-span-full row-span-full flex items-center justify-center text-center">
-                        <p className="text-muted-foreground">
-                            {isManualMode
-                                ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
-                                : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
-                            }
-                        </p>
-                     </div>
-                  )}
-                  {renderScheduleItems()}
-                </div>
+                {/* Schedule Items */}
+                {renderScheduleItems()}
             </div>
 
             {isManualMode && manualConflicts.length > 0 && (
