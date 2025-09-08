@@ -44,12 +44,13 @@ export async function extractCoursesFromPdf(
   input: ExtractCoursesFromPdfInput
 ): Promise<ExtractCoursesFromPdfOutput> {
   const result = await extractCoursesFlow(input);
-  // Post-processing to add IDs
+  // Post-processing to add consistent IDs
   const coursesWithIds = result.courses.map(course => {
     const instructorId = course.instructorName.replace(/\s+/g, '-').toLowerCase();
+    const courseId = `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`;
     return {
       ...course,
-      id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
+      id: courseId,
       instructors: [{ id: instructorId, name: course.instructorName }],
     };
   });
