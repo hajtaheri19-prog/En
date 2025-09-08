@@ -81,33 +81,40 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         const endMinutes = timeToMinutes(endTime);
 
         for (let i = 0; i < sortedTimeSlots.length; i++) {
-            if (startMinutes >= timeToMinutes(sortedTimeSlots[i].start) && startCol === -1) {
+            const slotStartMinutes = timeToMinutes(sortedTimeSlots[i].start);
+            const slotEndMinutes = timeToMinutes(sortedTimeSlots[i].end);
+             // Find the starting column
+            if (startMinutes >= slotStartMinutes && startMinutes < slotEndMinutes) {
                 startCol = i + 2;
             }
-            if (endMinutes <= timeToMinutes(sortedTimeSlots[i].end)) {
-                 if (endCol === -1 || i + 2 < endCol) {
-                    endCol = i + 2;
-                }
+             // Find the ending column
+            if (endMinutes > slotStartMinutes && endMinutes <= slotEndMinutes) {
+                endCol = i + 3; // +3 because grid lines are 1-based and we need to span TO the line after the column
             }
         }
         
-         // Fallback logic
+        // Fallback for courses that span multiple slots
         if (startCol === -1) {
-            for (let i = 0; i < sortedTimeSlots.length; i++) {
+             for (let i = 0; i < sortedTimeSlots.length; i++) {
                 if (startMinutes < timeToMinutes(sortedTimeSlots[i].end)) {
                     startCol = i + 2;
                     break;
                 }
             }
         }
+
         if (endCol === -1) {
-            endCol = startCol;
+            for (let i = sortedTimeSlots.length - 1; i >= 0; i--) {
+                if(endMinutes > timeToMinutes(sortedTimeSlots[i].start)) {
+                    endCol = i + 3;
+                    break;
+                }
+            }
         }
 
-
-        if (startCol === -1) return null;
+        if (startCol === -1 || endCol === -1) return null;
         
-        const gridColumn = `${startCol} / ${endCol + 1}`;
+        const gridColumn = `${startCol} / ${endCol}`;
         
         return { 
             gridRow: `${gridRow} / span 1`,
@@ -207,7 +214,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const downloadAsPng = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: 'white' })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = 'schedule.png';
@@ -219,7 +226,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const downloadAsPdf = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: 'white' })
       .then((dataUrl) => {
         const pdf = new jsPDF('l', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
         pdf.addImage(dataUrl, 'PNG', 0, 0, scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight);
@@ -364,11 +371,11 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           renderSkeleton()
         ) : (
           <div className="overflow-x-auto">
-             <div 
+             <div
                 ref={scheduleRef} 
-                className="grid gap-px bg-background min-w-[900px] border border-border"
+                className="grid gap-px bg-background p-1 min-w-[900px] border border-border"
                 style={{
-                  gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, 1fr)`,
+                  gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, minmax(120px, 1fr))`,
                   gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
                   direction: 'rtl'
                 }}
@@ -377,29 +384,28 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 <div className="bg-card border-b border-l border-border sticky right-0 z-20"></div>
 
                 {/* Time Slot Headers */}
-                {sortedTimeSlots.map(ts => (
-                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border z-10">
+                {sortedTimeSlots.map((ts, index) => (
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
                     <div>{ts.name}</div>
                     <div className="font-mono">{ts.start}-{ts.end}</div>
                   </div>
                 ))}
 
                 {/* Day Headers and Grid Cells */}
-                {days.map((day) => (
-                    <React.Fragment key={day}>
-                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border z-20">{day}</div>
-                        {sortedTimeSlots.map(ts => (
-                            <div key={`${day}-${ts.id}`} className="bg-card min-h-[80px] border-b border-l border-border"></div>
-                        ))}
-                    </React.Fragment>
+                {days.map((day, dayIndex) => (
+                  <React.Fragment key={day}>
+                      <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border z-10" style={{ gridRow: `${dayIndex + 2} / span 1` }}>{day}</div>
+                      {sortedTimeSlots.map((ts, tsIndex) => (
+                          <div key={`${day}-${ts.id}`} className="bg-secondary/20 min-h-[80px] border-b border-l border-border" style={{ gridColumn: `${tsIndex + 2} / span 1`, gridRow: `${dayIndex + 2} / span 1` }}></div>
+                      ))}
+                  </React.Fragment>
                 ))}
                 
                 {renderScheduleItems()}
                  
                 {scheduleItems.length === 0 && (
                   <div 
-                      className="flex items-center justify-center text-center text-muted-foreground p-8"
-                      style={{ gridColumn: `1 / -1`, gridRow: `2 / span ${days.length}`}}
+                      className="flex items-center justify-center text-center text-muted-foreground p-8 col-start-1 col-end-[-1] row-start-2 row-end-[-1]"
                   >
                         {timeSlots.length === 0
                           ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."
