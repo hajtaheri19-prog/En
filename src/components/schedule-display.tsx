@@ -81,18 +81,31 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         const endMinutes = timeToMinutes(endTime);
 
         for (let i = 0; i < sortedTimeSlots.length; i++) {
-            if (startMinutes >= timeToMinutes(sortedTimeSlots[i].start)) {
+            if (startMinutes >= timeToMinutes(sortedTimeSlots[i].start) && startCol === -1) {
                 startCol = i + 2;
             }
             if (endMinutes <= timeToMinutes(sortedTimeSlots[i].end)) {
-                if (endCol === -1) endCol = i + 2;
+                 if (endCol === -1 || i + 2 < endCol) {
+                    endCol = i + 2;
+                }
             }
         }
         
-        if (startCol === -1 && sortedTimeSlots.length > 0) startCol = 2; // Default to first if not found
-        if (endCol === -1 && sortedTimeSlots.length > 0) endCol = sortedTimeSlots.length + 1; // Default to last if not found
+         // Fallback logic
+        if (startCol === -1) {
+            for (let i = 0; i < sortedTimeSlots.length; i++) {
+                if (startMinutes < timeToMinutes(sortedTimeSlots[i].end)) {
+                    startCol = i + 2;
+                    break;
+                }
+            }
+        }
+        if (endCol === -1) {
+            endCol = startCol;
+        }
 
-        if (startCol === -1 || endCol === -1) return null;
+
+        if (startCol === -1) return null;
         
         const gridColumn = `${startCol} / ${endCol + 1}`;
         
@@ -168,8 +181,6 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         for (let j = i + 1; j < blocks.length; j++) {
           const block1 = blocks[i];
           const block2 = blocks[j];
-          // Check for overlap. If start time of one is less than end time of another,
-          // AND end time of one is greater than start time of another, they overlap.
           if (block1.start < block2.end && block1.end > block2.start) {
             conflicts.push({
               course1: `${block1.courseName} (${block1.courseCode})`,
@@ -239,7 +250,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const renderScheduleItems = () => {
     if (scheduleItems.length === 0) {
-      return null; // Don't render anything, the container will show a message
+      return null;
     }
     
     return scheduleItems.flatMap((item, index) => {
@@ -355,7 +366,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           <div className="overflow-x-auto">
              <div 
                 ref={scheduleRef} 
-                className="grid gap-px bg-card/50 min-w-[900px] border border-border"
+                className="grid gap-px bg-background min-w-[900px] border border-border"
                 style={{
                   gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, 1fr)`,
                   gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
@@ -363,11 +374,11 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 }}
              >
                 {/* Top-left empty cell */}
-                <div className="bg-card border-b border-l border-border"></div>
+                <div className="bg-card border-b border-l border-border sticky right-0 z-20"></div>
 
                 {/* Time Slot Headers */}
                 {sortedTimeSlots.map(ts => (
-                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border">
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border z-10">
                     <div>{ts.name}</div>
                     <div className="font-mono">{ts.start}-{ts.end}</div>
                   </div>
@@ -376,7 +387,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {/* Day Headers and Grid Cells */}
                 {days.map((day) => (
                     <React.Fragment key={day}>
-                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border">{day}</div>
+                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border z-20">{day}</div>
                         {sortedTimeSlots.map(ts => (
                             <div key={`${day}-${ts.id}`} className="bg-card min-h-[80px] border-b border-l border-border"></div>
                         ))}
