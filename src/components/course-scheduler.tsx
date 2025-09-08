@@ -54,7 +54,7 @@ export default function CourseScheduler() {
     (window as any).__GEMINI_API_KEY__ = apiKey;
     toast({
       title: "کلید API ذخیره شد",
-      description: "کلید API شما برای این جلسه ذخیره شد.",
+      description: "کلید API شما برای استفاده در این مرورگر ذخیره شد.",
     });
   };
 
@@ -364,19 +364,19 @@ export default function CourseScheduler() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="api-key">کلید API گوگل</Label>
+              <Label htmlFor="api-key">کلید API هوش مصنوعی</Label>
               <div className="flex gap-2">
                 <Input
                   id="api-key"
                   type="password"
-                  placeholder="کلید Gemini API خود را وارد کنید"
+                  placeholder="کلید API خود را وارد کنید"
                   value={apiKey}
                   onChange={handleApiKeyChange}
                 />
                 <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                برای استفاده از قابلیت‌های هوش مصنوعی، کلید API شما ضروری است.
+                برای استفاده از قابلیت‌های هوشمند برنامه، کلید API شما ضروری است.
               </p>
             </div>
           </CardContent>
@@ -537,3 +537,5 @@ export default function CourseScheduler() {
     </div>
   );
 }
+
+    

@@ -70,27 +70,19 @@ const getGridPosition = (timeslot: string) => {
     const startRow = timeToGridRow(startTime);
     const endRow = timeToGridRow(endTime);
 
-    // This is the duration in hours (e.g., 2.5 for a 2.5-hour class)
     const durationInHours = endRow - startRow;
     
     if (gridColumn === 0 || !startRow || !durationInHours || durationInHours <= 0) return null;
 
-    // The grid row starts from the beginning of the hour
-    // e.g. 7:30 (startRow 1.5) starts on CSS grid row 2 (index 1 + 1)
     const gridRowStart = Math.floor(startRow) + 1;
     
-    // The span is how many rows it covers, rounding up for partials
     const rowSpan = Math.ceil(startRow + durationInHours) - Math.floor(startRow);
 
-    // Calculate the top offset for classes not starting on the hour
-    // e.g. 7:30 (startRow 1.5) -> (1.5 - 1) * 100 = 50%
     const topOffsetPercentage = (startRow - Math.floor(startRow)) * 100;
 
     return { 
       gridColumn,
-      // e.g., grid-row: 2 / span 3
       gridRow: `${gridRowStart} / span ${rowSpan}`,
-      // Height is calculated based on exact duration in hours relative to row height
       height: `calc(${durationInHours * 100}% - 2px)`,
       top: `${topOffsetPercentage}%`,
     };
@@ -304,9 +296,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 
                 
                 {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[44px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
+                <div className="absolute inset-0 top-[44px] left-[50px] right-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
                   {scheduleItems.length === 0 && (
-                     <div className="col-start-2 col-span-full row-span-full flex items-center justify-center text-center">
+                     <div className="col-start-1 col-span-full row-span-full flex items-center justify-center text-center">
                         <p className="text-muted-foreground">
                             {isManualMode
                                 ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
@@ -356,3 +348,5 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     </Card>
   );
 }
+
+    
