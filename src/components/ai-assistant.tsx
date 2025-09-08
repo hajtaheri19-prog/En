@@ -6,8 +6,6 @@ import { Bot, User, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { SheetTitle } from "./ui/sheet";
-
 
 type Message = {
   role: "user" | "model";
@@ -80,7 +78,6 @@ export default function AiAssistant() {
 
   return (
     <div className="flex flex-col h-full p-2">
-        <SheetTitle className="sr-only">دستیار هوشمند</SheetTitle>
       <div className="flex-1 overflow-y-auto space-y-4 p-4">
         {history.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">

@@ -7,7 +7,7 @@ import AiAssistant from '@/components/ai-assistant';
 export default function Home() {
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar title="دستیار هوشمند">
         <SidebarHeader>
            <div className="inline-flex items-center gap-2">
             <Bot className="h-6 w-6 text-primary" />
