@@ -394,23 +394,20 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                     </React.Fragment>
                 ))}
                 
-                {/* Render items inside a container that is not part of the grid flow */}
-                <div className="contents">
-                    {renderScheduleItems()}
-                </div>
-
-                 {scheduleItems.length === 0 && (
-                    <div 
-                        className="flex items-center justify-center text-center text-muted-foreground p-8"
-                        style={{ gridColumn: `1 / span ${sortedTimeSlots.length + 1}`, gridRow: `2 / span ${days.length}`}}
-                    >
-                         {timeSlots.length === 0
-                            ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."
-                            : isManualMode
-                                ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
-                                : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
+                {renderScheduleItems()}
+                 
+                {scheduleItems.length === 0 && (
+                  <div 
+                      className="flex items-center justify-center text-center text-muted-foreground p-8"
+                      style={{ gridColumn: `1 / -1`, gridRow: `2 / span ${days.length}`}}
+                  >
+                        {timeSlots.length === 0
+                          ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."
+                          : isManualMode
+                              ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
+                              : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
                         }
-                    </div>
+                  </div>
                 )}
             </div>
 
