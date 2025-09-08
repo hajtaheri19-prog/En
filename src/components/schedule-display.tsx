@@ -12,7 +12,7 @@ import { useRef, useCallback, useMemo } from "react";
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Papa from 'papaparse';
-import { Course, TimeSlot } from "@/types";
+import type { Course, TimeSlot } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,68 +54,64 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
   const isManualMode = manualCourses !== undefined;
 
   const sortedTimeSlots = useMemo(() => {
+    if (!timeSlots) return [];
     return [...timeSlots].sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
   }, [timeSlots]);
-
+  
   const getGridPosition = useCallback((timeslot: string) => {
     try {
-      const parts = timeslot.trim().split(/\s+/);
-      if (parts.length < 2) return null;
+        const parts = timeslot.trim().split(/\s+/);
+        if (parts.length < 2) return null;
 
-      const day = parts[0];
-      const timeRange = parts[1];
-      const [startTime, endTime] = timeRange.split("-");
-      
-      if (!startTime || !endTime) return null;
+        const day = parts[0];
+        const timeRange = parts[1];
+        const [startTime, endTime] = timeRange.split("-");
 
-      const startMinutes = timeToMinutes(startTime);
-      const endMinutes = timeToMinutes(endTime);
+        if (!startTime || !endTime) return null;
+        
+        const dayIndex = days.indexOf(day);
+        if (dayIndex === -1) return null;
 
-      const gridRow = days.indexOf(day) + 2; // +1 for 1-based index, +1 for header row
-      
-      let gridColStart = -1;
-      let gridColEnd = -1;
+        const gridRow = dayIndex + 2;
 
-      // Find the start column
-      for(let i = 0; i < sortedTimeSlots.length; i++) {
-        if(timeToMinutes(sortedTimeSlots[i].start) >= startMinutes) {
-          gridColStart = i + 2; // +1 for 1-based, +1 for day header col
-          break;
+        let startCol = -1;
+        let endCol = -1;
+
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = timeToMinutes(endTime);
+
+        for (let i = 0; i < sortedTimeSlots.length; i++) {
+            if (startMinutes >= timeToMinutes(sortedTimeSlots[i].start)) {
+                startCol = i + 2;
+            }
+            if (endMinutes <= timeToMinutes(sortedTimeSlots[i].end)) {
+                if (endCol === -1) endCol = i + 2;
+            }
         }
-      }
-      if (gridColStart === -1 && startMinutes > timeToMinutes(sortedTimeSlots[sortedTimeSlots.length - 1]?.start)) {
-          gridColStart = sortedTimeSlots.length + 1;
-      }
+        
+        if (startCol === -1 && sortedTimeSlots.length > 0) startCol = 2; // Default to first if not found
+        if (endCol === -1 && sortedTimeSlots.length > 0) endCol = sortedTimeSlots.length + 1; // Default to last if not found
 
-
-      // Find the end column
-       for(let i = sortedTimeSlots.length - 1; i >= 0; i--) {
-        if(timeToMinutes(sortedTimeSlots[i].end) <= endMinutes) {
-          gridColEnd = i + 3; // +1 for 1-based, +1 for day header, +1 to span *until* the next
-          break;
-        }
-      }
-      if (gridColEnd === -1 && endMinutes < timeToMinutes(sortedTimeSlots[0]?.end)) {
-          gridColEnd = 2;
-      }
-
-      if (gridRow < 2 || gridColStart < 2 || gridColEnd < gridColStart) return null;
-
-      return { 
-        gridRow: `${gridRow} / span 1`,
-        gridColumn: `${gridColStart} / ${gridColEnd}`,
-      };
+        if (startCol === -1 || endCol === -1) return null;
+        
+        const gridColumn = `${startCol} / ${endCol + 1}`;
+        
+        return { 
+            gridRow: `${gridRow} / span 1`,
+            gridColumn: gridColumn,
+        };
     } catch (e) {
-      console.error("Error parsing timeslot:", timeslot, e);
-      return null;
+        console.error("Error parsing timeslot:", timeslot, e);
+        return null;
     }
-  }, [sortedTimeSlots]);
+}, [sortedTimeSlots]);
 
 
 
   const scheduleItems = useMemo(() => {
     if (isManualMode) {
-      return manualCourses!.map(course => ({
+      if (!manualCourses) return [];
+      return manualCourses.map(course => ({
         courseCode: course.code,
         courseName: course.name,
         instructor: course.instructors.map(i => i.name).join(', '),
@@ -200,25 +196,25 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const downloadAsPng = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 1.5, skipFonts: true })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = 'schedule.png';
         link.href = dataUrl;
         link.click();
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error("Could not generate PNG", err));
   }, [scheduleRef]);
 
   const downloadAsPdf = useCallback(() => {
     if (scheduleRef.current === null) return;
     toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true })
       .then((dataUrl) => {
-        const pdf = new jsPDF('landscape', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
+        const pdf = new jsPDF('l', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
         pdf.addImage(dataUrl, 'PNG', 0, 0, scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight);
         pdf.save('schedule.pdf');
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error("Could not generate PDF", err));
   }, [scheduleRef]);
 
   const downloadAsCsv = useCallback(() => {
@@ -271,7 +267,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm h-full ${colorClass}`}
+            className={`p-1.5 rounded-lg border text-xs flex flex-col justify-center overflow-hidden shadow-sm h-full ${colorClass}`}
             style={{ 
               gridRow: pos.gridRow, 
               gridColumn: pos.gridColumn,
@@ -327,7 +323,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط هوش مصنوعی."}
             </CardDescription>
         </div>
-         {(scheduleItems.length > 0 || isManualMode) && !isLoading && (
+         {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -359,18 +355,19 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           <div className="overflow-x-auto">
              <div 
                 ref={scheduleRef} 
-                className="grid gap-px bg-border min-w-[900px] border border-border"
+                className="grid gap-px bg-card/50 min-w-[900px] border border-border"
                 style={{
                   gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, 1fr)`,
                   gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
+                  direction: 'rtl'
                 }}
              >
                 {/* Top-left empty cell */}
-                <div className="bg-card"></div>
+                <div className="bg-card border-b border-l border-border"></div>
 
                 {/* Time Slot Headers */}
                 {sortedTimeSlots.map(ts => (
-                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-border">
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border">
                     <div>{ts.name}</div>
                     <div className="font-mono">{ts.start}-{ts.end}</div>
                   </div>
@@ -379,9 +376,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {/* Day Headers and Grid Cells */}
                 {days.map((day) => (
                     <React.Fragment key={day}>
-                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky left-0 bg-card border-l border-border">{day}</div>
+                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border">{day}</div>
                         {sortedTimeSlots.map(ts => (
-                            <div key={`${day}-${ts.id}`} className="bg-card/50 min-h-[80px]"></div>
+                            <div key={`${day}-${ts.id}`} className="bg-card min-h-[80px] border-b border-l border-border"></div>
                         ))}
                     </React.Fragment>
                 ))}
@@ -393,7 +390,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
                  {scheduleItems.length === 0 && (
                     <div 
-                        className="text-center text-muted-foreground p-8"
+                        className="flex items-center justify-center text-center text-muted-foreground p-8"
                         style={{ gridColumn: `1 / span ${sortedTimeSlots.length + 1}`, gridRow: `2 / span ${days.length}`}}
                     >
                          {timeSlots.length === 0
@@ -408,10 +405,10 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
             {isManualMode && manualConflicts.length > 0 && (
                  <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4 ml-2" />
+                    <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="font-headline">هشدار تداخل زمانی</AlertTitle>
                     <AlertDescription>
-                      <ul className="list-disc pr-4 space-y-1 mt-2">
+                      <ul className="list-disc mr-4 space-y-1 mt-2">
                         {manualConflicts.map((conflict, index) => (
                             <li key={index}>
                                 تداخل در روز {conflict.timeslot}: <span className="font-semibold">{conflict.course1}</span> با <span className="font-semibold">{conflict.course2}</span>
@@ -426,16 +423,16 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
               <div className="mt-6 space-y-4">
                  {scheduleResult.recommendedGroup && (
                   <Alert variant="default" className="bg-primary/10 border-primary/20">
-                    <Group className="h-4 w-4 ml-2 text-primary" />
+                    <Group className="h-4 w-4" />
                     <AlertTitle className="font-headline text-primary">گروه پیشنهادی: {scheduleResult.recommendedGroup}</AlertTitle>
                   </Alert>
                 )}
                 {scheduleResult.conflicts && scheduleResult.conflicts.length > 0 && (
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4 ml-2" />
+                    <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="font-headline">تداخل در برنامه</AlertTitle>
                     <AlertDescription>
-                      دروس زیر به دلیل تداخل قابل برنامه‌ریزی نبودند:
+                      دروس زیر به دلیل تداخل قابل برنامه‌ریزی نبوده‌اند:
                       <div className="flex flex-wrap gap-2 mt-2">
                         {scheduleResult.conflicts.map(c => <Badge key={c} variant="destructive">{c}</Badge>)}
                       </div>
@@ -444,7 +441,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 )}
                 {scheduleResult.rationale && (
                    <Alert>
-                    <Lightbulb className="h-4 w-4 ml-2" />
+                    <Lightbulb className="h-4 w-4" />
                     <AlertTitle className="font-headline">منطق هوش مصنوعی</AlertTitle>
                     <AlertDescription>
                       {scheduleResult.rationale}
