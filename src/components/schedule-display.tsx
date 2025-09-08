@@ -28,7 +28,7 @@ interface ScheduleDisplayProps {
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
-const timeSlots = Array.from({ length: 13 }, (_, i) => `${i + 8}:00`); // 8:00 to 20:00
+const timeSlots = Array.from({ length: 14 }, (_, i) => `${i + 7}:00`); // 7:00 to 20:00
 
 const dayToGridCol = (day: string) => {
   const d = day.trim();
@@ -45,8 +45,12 @@ const dayToGridCol = (day: string) => {
 
 const timeToGridRow = (time: string) => {
   try {
-    const hour = parseInt(time.split(":")[0], 10);
-    return hour - 7; // 8:00 is row 1
+    const [hourStr, minuteStr] = time.split(":");
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    // 7:00 is row 1. Each row is an hour.
+    // 7:00 -> 1, 7:30 -> 1.5, 8:00 -> 2
+    return (hour - 6) + (minute / 60);
   } catch {
     return 1;
   }
@@ -62,28 +66,26 @@ const getGridPosition = (timeslot: string) => {
     const [startTime, endTime] = timeRange.split("-");
     
     const gridColumn = dayToGridCol(day);
-    const startHour = parseInt(startTime.split(':')[0]);
-    const endHour = parseInt(endTime.split(':')[0]);
-    const endMinutes = parseInt(endTime.split(':')[1]);
-
-    const gridRowStart = timeToGridRow(startTime);
-    // End row should be the row of the hour before the end time finishes.
-    // If it ends at 16:00, it occupies up to the 15:00 slot, so end is 16-7=9.
-    let gridRowEnd = timeToGridRow(endTime);
-    if(endMinutes === 0) {
-      gridRowEnd = endHour - 8;
-    } else {
-      gridRowEnd = endHour - 7;
-    }
     
-    // Duration in hours to calculate row span
-    const duration = (endHour - startHour) + (endMinutes / 60);
+    const startRow = timeToGridRow(startTime);
+    const endRow = timeToGridRow(endTime);
 
-    if (gridColumn === 0 || !gridRowStart || !gridRowEnd) return null;
+    const durationInRows = endRow - startRow;
     
+    if (gridColumn === 0 || !startRow || !durationInRows) return null;
+
+    const gridRowStart = Math.floor(startRow) + 1; // CSS grid rows start at 1
+    const span = Math.ceil(durationInRows);
+
+    // Adjust for fractional start times (like 7:30)
+    const topOffset = (startRow - Math.floor(startRow)) * 100; // As a percentage
+
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / span ${Math.ceil(duration)}`,
+      gridRow: `${gridRowStart} / span ${span}`,
+      top: `${topOffset}%`,
+      // Height should also be based on duration
+      height: `calc(${durationInRows * 100}% - 2px)`
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
@@ -184,8 +186,13 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm ${colorClasses[courseColorIndex]}`}
-            style={{ gridColumn: pos.gridColumn, gridRow: pos.gridRow }}
+            className={`absolute p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm w-[calc(100%-4px)] ${colorClasses[courseColorIndex]}`}
+            style={{ 
+              gridColumn: pos.gridColumn, 
+              gridRow: pos.gridRow,
+              top: pos.top,
+              height: pos.height,
+            }}
           >
             <p className="font-bold">{item.courseName}</p>
             <p className="text-xs opacity-80">{item.instructor}</p>
@@ -206,7 +213,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             {/* Headers */}
             {days.map(day => ( <Skeleton key={day} className="h-8 w-full" /> ))}
             {/* Time slots + Grid */}
-            {[...Array(13)].map((_, i) => (
+            {[...Array(14)].map((_, i) => (
                 <div key={i} className="col-span-full grid grid-cols-[auto_repeat(6,1fr)] gap-1 mt-1">
                     <Skeleton className="h-8 w-12" />
                     <Skeleton className="h-8 w-full" />
@@ -218,7 +225,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 </div>
             ))}
             {/* Skeleton blocks */}
-            <div className="absolute inset-0 top-10 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,1fr)] gap-1">
+            <div className="absolute inset-0 top-10 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(14,1fr)] gap-1">
                 <Skeleton className="col-start-2 row-start-2 row-span-2 rounded-lg" />
                 <Skeleton className="col-start-4 row-start-3 row-span-2 rounded-lg" />
                 <Skeleton className="col-start-6 row-start-6 row-span-2 rounded-lg" />
@@ -273,7 +280,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           renderSkeleton()
         ) : (
           <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(13,45px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(14,45px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
                 {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
@@ -290,7 +297,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 
                 
                 {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[41px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,45px)] gap-1">
+                <div className="absolute inset-0 top-[41px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(14,45px)] gap-1">
                   {scheduleItems.length === 0 && (
                      <div className="col-start-2 col-span-full row-span-full flex items-center justify-center text-center">
                         <p className="text-muted-foreground">

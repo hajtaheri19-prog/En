@@ -27,7 +27,7 @@ const SuggestOptimalScheduleInputSchema = z.object({
   availableCourses: z.array(CourseSchema).describe('لیست تمام دروس موجود که از PDF استخراج شده یا دستی وارد شده‌اند.'),
   studentPreferences: z.object({
     preferDayOff: z.string().optional().describe('روز هفته‌ای که دانشجو ترجیح می‌دهد خالی باشد (مثال: چهارشنبه).'),
-    shiftPreference: z.enum(["больше-утром", "больше-днем", "меньше-утром", "меньше-днем", ""]).optional().describe('ترجیح دانشجو برای شیفت کلاس‌ها.'),
+    shiftPreference: z.enum(["больше-утром", "больше-днем", "меньше-утром", "меньше-днем", ""]).optional().describe('ترجیح دانشجو برای شیفت کلاس‌ها. صبح از ساعت ۷ تا ۱۲ و عصر از ۱۲ به بعد است.'),
     instructorPreferences: z.array(z.object({
       courseCode: z.string().describe('کد درس عمومی.'),
       instructorId: z.string().describe('شناسه استاد ترجیحی برای این درس عمومی.')
@@ -85,6 +85,7 @@ const suggestOptimalSchedulePrompt = ai.definePrompt({
   قوانین اصلی:
   1. دانشجو باید تمام دروس تخصصی، تربیتی و فرهنگی خود را از **یک گروه واحد** بردارد.
   2. دروس "عمومی" را می‌توان خارج از گروه اصلی و از بین تمام گزینه‌های موجود انتخاب کرد، به شرطی که تداخل زمانی نداشته باشند.
+  3. بازه زمانی کاری دانشگاه از ساعت ۷ صبح تا ۲۱ شب است.
 
   اطلاعات ورودی:
   - **تمام دروس موجود**:
@@ -93,7 +94,7 @@ const suggestOptimalSchedulePrompt = ai.definePrompt({
     {{/each}}
   - **اولویت‌های دانشجو**:
     - روز تعطیل دلخواه: {{studentPreferences.preferDayOff}}
-    - ترجیح شیفت کلاس: {{studentPreferences.shiftPreference}}
+    - ترجیح شیفت کلاس: {{studentPreferences.shiftPreference}} (صبح از ۷ تا ۱۲، عصر از ۱۲ به بعد)
     - اولویت استاد برای دروس عمومی:
       {{#each studentPreferences.instructorPreferences}}
       - درس {{this.courseCode}} با استاد {{this.instructorId}}
