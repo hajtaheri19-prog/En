@@ -31,12 +31,17 @@ export default function Home() {
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
             <div className="flex items-center gap-2">
-              <SidebarTrigger />
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden">
+                <SidebarTrigger>
+                  <Bot />
+                </SidebarTrigger>
+              </Button>
               <BookHeart className="h-6 w-6 text-primary hidden sm:flex" />
                <h1 className="font-headline text-xl md:text-2xl font-bold tracking-tighter">
                 انتخاب واحد هوشمند KPU
               </h1>
             </div>
+             <SidebarTrigger className="hidden md:flex" />
         </header>
         <main className="p-4 md:p-6 lg:p-8">
           <CourseScheduler />

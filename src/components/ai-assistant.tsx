@@ -82,8 +82,8 @@ export default function AiAssistant() {
         {history.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Bot className="h-12 w-12 mb-4" />
-            <h3 className="font-semibold text-lg">دستیار هوشمند</h3>
-            <p className="text-sm">می‌توانید سوالات خود را در مورد انتخاب واحد، برنامه درسی یا حتی برنامه غذایی بپرسید!</p>
+            <h3 className="font-semibold text-lg">دستیار انتخاب واحد</h3>
+            <p className="text-sm">می‌توانید سوالات خود را در مورد قوانین آموزشی و برنامه‌ریزی درسی بپرسید.</p>
           </div>
         )}
         {history.map((msg, index) => (
@@ -103,7 +103,7 @@ export default function AiAssistant() {
       </div>
       <div className="relative mt-auto border-t pt-4">
         <Textarea
-          placeholder="از من بپرسید..."
+          placeholder="از من در مورد انتخاب واحد بپرسید..."
           value={context}
           onChange={(e) => setContext(e.target.value)}
           onKeyDown={(e) => {
