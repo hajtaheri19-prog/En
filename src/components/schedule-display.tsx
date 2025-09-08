@@ -123,7 +123,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const downloadAsPng = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 1.5 })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 1.5, skipFonts: true })
       .then((dataUrl) => {
         const link = document.createElement('a');
         link.download = 'schedule.png';
@@ -135,7 +135,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const downloadAsPdf = useCallback(() => {
     if (scheduleRef.current === null) return;
-    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2 })
+    toPng(scheduleRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true })
       .then((dataUrl) => {
         const pdf = new jsPDF('landscape', 'px', [scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight]);
         pdf.addImage(dataUrl, 'PNG', 0, 0, scheduleRef.current!.offsetWidth, scheduleRef.current!.offsetHeight);
@@ -356,5 +356,3 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     </Card>
   );
 }
-
-    
