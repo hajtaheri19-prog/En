@@ -11,9 +11,9 @@ export default function Home() {
         <SidebarHeader>
            <div className="inline-flex items-center gap-2">
             <Bot className="h-6 w-6 text-primary" />
-            <h2 className="font-headline text-lg font-semibold tracking-tighter">
-              دستیار هوشمند
-            </h2>
+              <h2 className="font-headline text-lg font-semibold tracking-tighter">
+                دستیار هوشمند
+              </h2>
           </div>
         </SidebarHeader>
         <SidebarContent>

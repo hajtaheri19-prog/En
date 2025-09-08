@@ -741,3 +741,5 @@ export default function CourseScheduler() {
     </>
   );
 }
+
+    
