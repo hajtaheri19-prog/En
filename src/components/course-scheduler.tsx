@@ -24,6 +24,7 @@ import * as XLSX from 'xlsx';
 import { Checkbox } from "./ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { Alert, AlertTitle } from "./ui/alert";
+import EditCourseDialog from "./edit-course-dialog";
 
 
 export default function CourseScheduler() {
@@ -41,6 +42,7 @@ export default function CourseScheduler() {
   const [newCourseGroup, setNewCourseGroup] = useState("");
   const { toast } = useToast();
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
@@ -99,6 +101,15 @@ export default function CourseScheduler() {
       title: "درس جدید اضافه شد",
       description: `درس "${newCourse.name}" به لیست دروس موجود اضافه شد.`,
     });
+  };
+  
+  const handleUpdateCourse = (updatedCourse: Course) => {
+    setAvailableCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
+    toast({
+        title: "درس ویرایش شد",
+        description: `درس "${updatedCourse.name}" با موفقیت به‌روزرسانی شد.`,
+    });
+    setEditingCourse(null); // Close the dialog
   };
 
   const handleGenerateSchedule = () => {
@@ -425,6 +436,7 @@ export default function CourseScheduler() {
 
 
   return (
+    <>
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
       <div className="lg:col-span-2 flex flex-col gap-6">
         
@@ -602,9 +614,14 @@ export default function CourseScheduler() {
                                                     <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => handleRemoveCourse(course.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <div className="flex items-center flex-shrink-0">
+                                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={() => handleRemoveCourse(course.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -691,7 +708,15 @@ export default function CourseScheduler() {
         </Tabs>
       </div>
     </div>
+      {editingCourse && (
+        <EditCourseDialog
+          course={editingCourse}
+          onUpdateCourse={handleUpdateCourse}
+          onOpenChange={(isOpen) => !isOpen && setEditingCourse(null)}
+          timeSlots={timeSlots}
+          courseGroups={courseGroups}
+        />
+      )}
+    </>
   );
 }
-
-    

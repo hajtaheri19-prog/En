@@ -28,7 +28,6 @@ interface ScheduleDisplayProps {
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
-// Updated to start from 7:00
 const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 7}:00`); // 7:00 to 21:00
 
 const dayToGridCol = (day: string) => {
@@ -40,12 +39,10 @@ const dayToGridCol = (day: string) => {
     case "سه‌شنبه": return 5;
     case "چهارشنبه": return 6;
     case "پنجشنبه": return 7;
-    default: return 0; // Should not happen
+    default: return 0;
   }
 };
 
-// Converts time "HH:mm" to a numerical value representing hours from midnight.
-// e.g., "07:30" -> 7.5, "14:00" -> 14
 const timeToFractionalHour = (time: string): number | null => {
   try {
     const [hourStr, minuteStr] = time.split(":");
@@ -58,8 +55,18 @@ const timeToFractionalHour = (time: string): number | null => {
   }
 };
 
+interface TimeBlock {
+  day: string;
+  start: number;
+  end: number;
+}
 
-// Robust function to calculate grid positioning
+interface Conflict {
+  course1: string;
+  course2: string;
+  timeslot: string;
+}
+
 const getGridPosition = (timeslot: string) => {
   try {
     const parts = timeslot.trim().split(/\s+/);
@@ -77,23 +84,16 @@ const getGridPosition = (timeslot: string) => {
     
     if (gridColumn === 0 || startHour === null || endHour === null || endHour <= startHour) return null;
 
-    // Grid starts at 7:00. 1 hour = 1 row.
-    // The first row (for 7:00-8:00) is grid-row-start: 2
     const gridRowStart = Math.floor(startHour - 7) + 2; 
     const gridRowEnd = Math.ceil(endHour - 7) + 2;
     
-    // Calculate top offset as a percentage of the cell height (1 hour)
     const topOffsetPercentage = (startHour - Math.floor(startHour)) * 100;
-    
-    // Calculate height based on duration
     const durationInHours = endHour - startHour;
     
     return { 
       gridColumn,
       gridRow: `${gridRowStart} / ${gridRowEnd}`,
-      // height is duration * 100% of a cell height, minus 2px for gap
       height: `calc(${durationInHours * 100}% - 2px)`,
-       // top is the offset from the start of the hour slot
       top: `${topOffsetPercentage}%`
     };
   } catch (e) {
@@ -101,8 +101,6 @@ const getGridPosition = (timeslot: string) => {
     return null;
   }
 };
-
-
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
@@ -122,6 +120,62 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     }
     return scheduleResult?.schedule || [];
   }, [manualCourses, scheduleResult, isManualMode]);
+
+  const manualConflicts = useMemo((): Conflict[] => {
+    if (!isManualMode || !manualCourses || manualCourses.length < 2) {
+      return [];
+    }
+
+    const conflicts: Conflict[] = [];
+    const timeBlocksByDay: Record<string, { courseName: string, courseCode: string, timeslot: string, start: number, end: number }[]> = {};
+
+    manualCourses.forEach(course => {
+      course.timeslots.forEach(ts => {
+        const parts = ts.trim().split(/\s+/);
+        if (parts.length < 2) return;
+        const day = parts[0];
+        const [startTime, endTime] = parts[1].split('-');
+        const startHour = timeToFractionalHour(startTime);
+        const endHour = timeToFractionalHour(endTime);
+
+        if (startHour === null || endHour === null) return;
+        
+        if (!timeBlocksByDay[day]) {
+          timeBlocksByDay[day] = [];
+        }
+        timeBlocksByDay[day].push({ courseName: course.name, courseCode: course.code, timeslot: ts, start: startHour, end: endHour });
+      });
+    });
+
+    for (const day in timeBlocksByDay) {
+      const blocks = timeBlocksByDay[day];
+      for (let i = 0; i < blocks.length; i++) {
+        for (let j = i + 1; j < blocks.length; j++) {
+          const block1 = blocks[i];
+          const block2 = blocks[j];
+          // Check for overlap
+          if (block1.start < block2.end && block1.end > block2.start) {
+            conflicts.push({
+              course1: `${block1.courseName} (${block1.courseCode})`,
+              course2: `${block2.courseName} (${block2.courseCode})`,
+              timeslot: day,
+            });
+          }
+        }
+      }
+    }
+    
+    // Remove duplicate conflicts
+    const uniqueConflicts = conflicts.filter((conflict, index, self) =>
+      index === self.findIndex((c) => (
+        (c.course1 === conflict.course1 && c.course2 === conflict.course2) ||
+        (c.course1 === conflict.course2 && c.course2 === conflict.course1)
+      ))
+    );
+
+
+    return uniqueConflicts;
+  }, [isManualMode, manualCourses]);
 
 
   const downloadAsPng = useCallback(() => {
@@ -319,6 +373,22 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                   {renderScheduleItems()}
                 </div>
             </div>
+
+            {isManualMode && manualConflicts.length > 0 && (
+                 <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4 ml-2" />
+                    <AlertTitle className="font-headline">هشدار تداخل زمانی</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc pr-4 space-y-1 mt-2">
+                        {manualConflicts.map((conflict, index) => (
+                            <li key={index}>
+                                تداخل در روز {conflict.timeslot}: <span className="font-semibold">{conflict.course1}</span> با <span className="font-semibold">{conflict.course2}</span>
+                            </li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+            )}
 
             {!isManualMode && scheduleResult && (
               <div className="mt-6 space-y-4">
