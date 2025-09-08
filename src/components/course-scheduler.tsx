@@ -692,13 +692,36 @@ export default function CourseScheduler() {
         </Button>
       </div>
       <div className="lg:col-span-3">
-        <Tabs defaultValue="ai-schedule">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+        <Tabs defaultValue="system-schedule">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="system-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+            <TabsTrigger value="ai-schedule" disabled><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
             <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
-          <TabsContent value="ai-schedule">
+          <TabsContent value="system-schedule">
             <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
+          </TabsContent>
+          <TabsContent value="ai-schedule">
+             <Card className="shadow-lg h-full sticky top-8">
+                <CardHeader>
+                   <CardTitle className="font-headline flex items-center gap-2">
+                    <BrainCircuit />
+                    پیشنهادی هوش مصنوعی
+                    </CardTitle>
+                    <CardDescription>
+                        این قابلیت قدرتمند به زودی فعال خواهد شد.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8 rounded-lg border-2 border-dashed h-96">
+                        <WandSparkles className="h-16 w-16 mb-4 text-primary/50" />
+                        <h3 className="text-xl font-bold mb-2">در حال توسعه...</h3>
+                        <p className="max-w-md">
+                            این بخش با استفاده از هوش مصنوعی پیشرفته (مانند Gemini) بهترین برنامه ممکن را با در نظر گرفتن تمام قوانین و اولویت‌های پیچیده برای شما ایجاد خواهد کرد. برای استفاده از این قابلیت در آینده به کلید API نیاز خواهید داشت.
+                        </p>
+                    </div>
+                </CardContent>
+             </Card>
           </TabsContent>
           <TabsContent value="manual-schedule">
             <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} timeSlots={timeSlots} />
