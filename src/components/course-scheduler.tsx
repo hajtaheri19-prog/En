@@ -700,10 +700,10 @@ export default function CourseScheduler() {
             <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="ai-schedule">
-            <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} />
+            <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
           </TabsContent>
           <TabsContent value="manual-schedule">
-            <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} />
+            <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} timeSlots={timeSlots} />
           </TabsContent>
         </Tabs>
       </div>

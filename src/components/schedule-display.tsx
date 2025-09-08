@@ -12,7 +12,7 @@ import { useRef, useCallback, useMemo } from "react";
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Papa from 'papaparse';
-import { Course } from "@/types";
+import { Course, TimeSlot } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,41 +25,21 @@ interface ScheduleDisplayProps {
   scheduleResult?: SuggestOptimalScheduleOutput | null;
   manualCourses?: Course[];
   isLoading: boolean;
+  timeSlots: TimeSlot[];
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
-const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 7}:00`); // 7:00 to 21:00
 
-const dayToGridCol = (day: string) => {
-  const d = day.trim();
-  switch (d) {
-    case "شنبه": return 2;
-    case "یکشنبه": return 3;
-    case "دوشنبه": return 4;
-    case "سه‌شنبه": return 5;
-    case "چهارشنبه": return 6;
-    case "پنجشنبه": return 7;
-    default: return 0;
-  }
+const timeToMinutes = (time: string): number => {
+    try {
+        const [hours, minutes] = time.split(':').map(Number);
+        if (isNaN(hours) || isNaN(minutes)) return 0;
+        return hours * 60 + minutes;
+    } catch {
+        return 0;
+    }
 };
 
-const timeToFractionalHour = (time: string): number | null => {
-  try {
-    const [hourStr, minuteStr] = time.split(":");
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    if (isNaN(hour) || isNaN(minute)) return null;
-    return hour + minute / 60;
-  } catch {
-    return null;
-  }
-};
-
-interface TimeBlock {
-  day: string;
-  start: number;
-  end: number;
-}
 
 interface Conflict {
   course1: string;
@@ -67,43 +47,71 @@ interface Conflict {
   timeslot: string;
 }
 
-const getGridPosition = (timeslot: string) => {
-  try {
-    const parts = timeslot.trim().split(/\s+/);
-    if (parts.length < 2) return null;
 
-    const day = parts[0];
-    const timeRange = parts[1];
-    const [startTime, endTime] = timeRange.split("-");
-    
-    if (!startTime || !endTime) return null;
-
-    const gridColumn = dayToGridCol(day);
-    const startHour = timeToFractionalHour(startTime);
-    const endHour = timeToFractionalHour(endTime);
-    
-    if (gridColumn === 0 || startHour === null || endHour === null || endHour <= startHour) return null;
-
-    // Grid row starts at 2 because row 1 is for headers. Base hour is 7:00.
-    const gridRowStart = (startHour - 7) * 2 + 2; // Using half-hour increments for more precision
-    const durationInHalfHours = (endHour - startHour) * 2;
-    const gridRowEnd = gridRowStart + durationInHalfHours;
-
-    return { 
-      gridColumn,
-      gridRow: `${Math.round(gridRowStart)} / ${Math.round(gridRowEnd)}`,
-    };
-  } catch (e) {
-    console.error("Error parsing timeslot:", timeslot, e);
-    return null;
-  }
-};
-
-
-export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading }: ScheduleDisplayProps) {
+export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
   
   const isManualMode = manualCourses !== undefined;
+
+  const sortedTimeSlots = useMemo(() => {
+    return [...timeSlots].sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+  }, [timeSlots]);
+
+  const getGridPosition = useCallback((timeslot: string) => {
+    try {
+      const parts = timeslot.trim().split(/\s+/);
+      if (parts.length < 2) return null;
+
+      const day = parts[0];
+      const timeRange = parts[1];
+      const [startTime, endTime] = timeRange.split("-");
+      
+      if (!startTime || !endTime) return null;
+
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+
+      const gridRow = days.indexOf(day) + 2; // +1 for 1-based index, +1 for header row
+      
+      let gridColStart = -1;
+      let gridColEnd = -1;
+
+      // Find the start column
+      for(let i = 0; i < sortedTimeSlots.length; i++) {
+        if(timeToMinutes(sortedTimeSlots[i].start) >= startMinutes) {
+          gridColStart = i + 2; // +1 for 1-based, +1 for day header col
+          break;
+        }
+      }
+      if (gridColStart === -1 && startMinutes > timeToMinutes(sortedTimeSlots[sortedTimeSlots.length - 1]?.start)) {
+          gridColStart = sortedTimeSlots.length + 1;
+      }
+
+
+      // Find the end column
+       for(let i = sortedTimeSlots.length - 1; i >= 0; i--) {
+        if(timeToMinutes(sortedTimeSlots[i].end) <= endMinutes) {
+          gridColEnd = i + 3; // +1 for 1-based, +1 for day header, +1 to span *until* the next
+          break;
+        }
+      }
+      if (gridColEnd === -1 && endMinutes < timeToMinutes(sortedTimeSlots[0]?.end)) {
+          gridColEnd = 2;
+      }
+
+      if (gridRow < 2 || gridColStart < 2 || gridColEnd < gridColStart) return null;
+
+      return { 
+        gridRow: `${gridRow} / span 1`,
+        gridColumn: `${gridColStart} / ${gridColEnd}`,
+      };
+    } catch (e) {
+      console.error("Error parsing timeslot:", timeslot, e);
+      return null;
+    }
+  }, [sortedTimeSlots]);
+
+
 
   const scheduleItems = useMemo(() => {
     if (isManualMode) {
@@ -118,6 +126,19 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     }
     return scheduleResult?.schedule || [];
   }, [manualCourses, scheduleResult, isManualMode]);
+
+    const timeToFractionalHour = (time: string): number | null => {
+      try {
+        const [hourStr, minuteStr] = time.split(":");
+        const hour = parseInt(hourStr, 10);
+        const minute = parseInt(minuteStr, 10);
+        if (isNaN(hour) || isNaN(minute)) return null;
+        return hour + minute / 60;
+      } catch {
+        return null;
+      }
+    };
+
 
   const manualConflicts = useMemo((): Conflict[] => {
     if (!isManualMode || !manualCourses || manualCourses.length < 2) {
@@ -222,16 +243,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   const renderScheduleItems = () => {
     if (scheduleItems.length === 0) {
-      return (
-         <div className="col-start-1 col-span-full row-start-2 row-span-full flex items-center justify-center text-center">
-            <p className="text-muted-foreground">
-                {isManualMode
-                    ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
-                    : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
-                }
-            </p>
-         </div>
-      );
+      return null; // Don't render anything, the container will show a message
     }
     
     return scheduleItems.flatMap((item, index) => {
@@ -259,10 +271,10 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`absolute p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-full ${colorClass}`}
+            className={`p-1.5 rounded-lg border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm h-full ${colorClass}`}
             style={{ 
-              gridColumn: pos.gridColumn, 
-              gridRow: pos.gridRow,
+              gridRow: pos.gridRow, 
+              gridColumn: pos.gridColumn,
             }}
           >
             <p className="font-bold truncate">{item.courseName}</p>
@@ -280,28 +292,25 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         <Skeleton className="h-8 w-3/5" />
         <Skeleton className="h-4 w-4/5" />
       </div>
-      <div className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
-         {/* Headers */}
-         <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
-         {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card"><Skeleton className="h-5 w-12 mx-auto" /></div>)}
-          {/* Time slots & Grid Lines */}
-         {Array.from({ length: 15 }).map((_, index) => (
-           <React.Fragment key={`skeleton-time-${index}`}>
-            <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}><Skeleton className="h-4 w-10 mx-auto" /></div>
-             {[...Array(6)].map((_, dayIndex) => (
-                <div key={`${index}-${dayIndex}`} className={`row-start-${index * 2 + 2} row-span-2 col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
+      <div className="overflow-x-auto">
+        <div className="min-w-[800px] space-y-2">
+            {/* Header */}
+            <div className="flex gap-2">
+                <Skeleton className="h-10 w-24" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 flex-1" />
+                ))}
+            </div>
+            {/* Rows */}
+             {days.map(day => (
+                 <div key={day} className="flex gap-2">
+                     <Skeleton className="h-16 w-24" />
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 flex-1" />
+                    ))}
+                 </div>
              ))}
-           </React.Fragment>
-        ))}
-         {/* Skeleton blocks */}
-         <div className="absolute inset-0 top-[50px] left-[60px] right-0 bottom-0 p-1 grid grid-cols-[repeat(6,1fr)] grid-rows-[repeat(30,20px)] gap-1">
-            <Skeleton className="col-start-2 row-start-2 row-span-4 rounded-lg" />
-            <Skeleton className="col-start-4 row-start-4 row-span-3 rounded-lg" />
-            <Skeleton className="col-start-6 row-start-10 row-span-4 rounded-lg" />
-            <Skeleton className="col-start-3 row-start-16 row-span-3 rounded-lg" />
-            <Skeleton className="col-start-5 row-start-1 row-span-4 rounded-lg" />
-            <Skeleton className="col-start-3 row-start-8 row-span-2 rounded-lg" />
-         </div>
+        </div>
       </div>
     </div>
   );
@@ -347,25 +356,54 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         {isLoading ? (
           renderSkeleton()
         ) : (
-          <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(30,20px)] w-full bg-card p-4 rounded-lg border">
-                {/* Headers */}
-                <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
-                {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
-                
-                {/* Time slots & Grid Lines */}
-                {Array.from({ length: 15 }).map((_, index) => (
-                   <React.Fragment key={`time-${index}`}>
-                    <div className={`row-start-${index * 2 + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start -translate-y-2`}>{`${index + 7}:00`}</div>
-                     {[...Array(6)].map((_, dayIndex) => (
-                        <div key={`${index}-${dayIndex}`} className={`row-start-${index * 2 + 2} row-span-2 col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
-                     ))}
-                   </React.Fragment>
+          <div className="overflow-x-auto">
+             <div 
+                ref={scheduleRef} 
+                className="grid gap-px bg-border min-w-[900px] border border-border"
+                style={{
+                  gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, 1fr)`,
+                  gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
+                }}
+             >
+                {/* Top-left empty cell */}
+                <div className="bg-card"></div>
+
+                {/* Time Slot Headers */}
+                {sortedTimeSlots.map(ts => (
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-border">
+                    <div>{ts.name}</div>
+                    <div className="font-mono">{ts.start}-{ts.end}</div>
+                  </div>
+                ))}
+
+                {/* Day Headers and Grid Cells */}
+                {days.map((day) => (
+                    <React.Fragment key={day}>
+                        <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky left-0 bg-card border-l border-border">{day}</div>
+                        {sortedTimeSlots.map(ts => (
+                            <div key={`${day}-${ts.id}`} className="bg-card/50 min-h-[80px]"></div>
+                        ))}
+                    </React.Fragment>
                 ))}
                 
-                
-                {/* Schedule Items */}
-                {renderScheduleItems()}
+                {/* Render items inside a container that is not part of the grid flow */}
+                <div className="contents">
+                    {renderScheduleItems()}
+                </div>
+
+                 {scheduleItems.length === 0 && (
+                    <div 
+                        className="text-center text-muted-foreground p-8"
+                        style={{ gridColumn: `1 / span ${sortedTimeSlots.length + 1}`, gridRow: `2 / span ${days.length}`}}
+                    >
+                         {timeSlots.length === 0
+                            ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."
+                            : isManualMode
+                                ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
+                                : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
+                        }
+                    </div>
+                )}
             </div>
 
             {isManualMode && manualConflicts.length > 0 && (
@@ -415,7 +453,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
