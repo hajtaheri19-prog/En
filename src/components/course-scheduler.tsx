@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -25,6 +25,7 @@ import { Checkbox } from "./ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { Alert, AlertTitle } from "./ui/alert";
 import EditCourseDialog from "./edit-course-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 
 export default function CourseScheduler() {
@@ -35,6 +36,7 @@ export default function CourseScheduler() {
   });
   const [scheduleResult, setScheduleResult] = useState<SuggestOptimalScheduleOutput | null>(null);
   const [isProcessing, startProcessingTransition] = useTransition();
+  const [apiProvider, setApiProvider] = useState('gemini');
   const [apiKey, setApiKey] = useState<string>('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [newTimeSlot, setNewTimeSlot] = useState({ name: "", start: "", end: "" });
@@ -46,19 +48,9 @@ export default function CourseScheduler() {
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
-    const providedApiKey = 'AIzaSyA8MPqX6ZOrA6yHVKYDCIgmrJT_CM4GZ9k';
-
     if (storedApiKey) {
       setApiKey(storedApiKey);
       (window as any).__GEMINI_API_KEY__ = storedApiKey;
-    } else if (providedApiKey) {
-       setApiKey(providedApiKey);
-       localStorage.setItem('gemini-api-key', providedApiKey);
-      (window as any).__GEMINI_API_KEY__ = providedApiKey;
-       toast({
-        title: "کلید API تنظیم شد",
-        description: "کلید API شما برای استفاده در این جلسه تنظیم و ذخیره شد.",
-      });
     }
 
     const storedTimeSlots = localStorage.getItem('course-time-slots');
@@ -69,7 +61,7 @@ export default function CourseScheduler() {
     if(storedCourseGroups) {
         setCourseGroups(JSON.parse(storedCourseGroups));
     }
-  }, [toast]);
+  }, []);
   
   useEffect(() => {
       localStorage.setItem('course-time-slots', JSON.stringify(timeSlots));
@@ -86,11 +78,13 @@ export default function CourseScheduler() {
   };
 
   const handleSaveApiKey = () => {
-    localStorage.setItem('gemini-api-key', apiKey);
-    (window as any).__GEMINI_API_KEY__ = apiKey;
+    localStorage.setItem(`${apiProvider}-api-key`, apiKey);
+    if (apiProvider === 'gemini') {
+        (window as any).__GEMINI_API_KEY__ = apiKey;
+    }
     toast({
       title: "کلید API ذخیره شد",
-      description: "کلید API شما برای استفاده در این مرورگر ذخیره شد.",
+      description: `کلید API شما برای ${apiProvider} ذخیره شد.`,
     });
   };
 
@@ -113,15 +107,6 @@ export default function CourseScheduler() {
   };
 
   const handleGenerateSchedule = () => {
-    if (!apiKey) {
-       toast({
-        title: "کلید API مورد نیاز است",
-        description: "لطفاً کلید API خود را برای استفاده از هوش مصنوعی وارد کنید.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (availableCourses.length === 0) {
       toast({
         title: "هیچ درسی موجود نیست",
@@ -141,6 +126,7 @@ export default function CourseScheduler() {
       };
 
       try {
+        // This now calls the local algorithm, not an AI flow
         const result = await suggestOptimalSchedule(input);
         setScheduleResult(result);
         toast({
@@ -151,7 +137,7 @@ export default function CourseScheduler() {
         console.error("خطا در ایجاد برنامه:", error);
         toast({
           title: "خطا در ایجاد برنامه",
-          description: "ایجاد برنامه با شکست مواجه شد. لطفاً کلید API و ورودی‌ها را بررسی کرده و دوباره تلاش کنید.",
+          description: "ایجاد برنامه با شکست مواجه شد. لطفاً ورودی‌ها را بررسی کرده و دوباره تلاش کنید.",
           variant: "destructive",
         });
       }
@@ -162,7 +148,7 @@ export default function CourseScheduler() {
      if (!apiKey) {
        toast({
         title: "کلید API مورد نیاز است",
-        description: "لطفاً کلید API خود را برای استخراج دروس از PDF وارد کنید.",
+        description: "لطفاً کلید API خود را برای استخراج دروس از PDF وارد کنید (بزودی این قابلیت نیاز به کلید نخواهد داشت).",
         variant: "destructive",
       });
       return;
@@ -442,24 +428,36 @@ export default function CourseScheduler() {
         
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
+            <CardDescription>برای فعالسازی قابلیت‌های هوشمند در آینده، کلید API را وارد کنید.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">کلید API هوش مصنوعی</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder="کلید API خود را وارد کنید"
-                  value={apiKey}
-                  onChange={handleApiKeyChange}
-                />
-                <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                برای استفاده از قابلیت‌های هوشمند برنامه، کلید API شما ضروری است.
-              </p>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
+                    <Select value={apiProvider} onValueChange={setApiProvider}>
+                        <SelectTrigger id="api-provider">
+                            <SelectValue placeholder="یک ارائه دهنده را انتخاب کنید" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="gemini">Gemini (بزودی)</SelectItem>
+                            <SelectItem value="openai" disabled>OpenAI (بزودی)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="api-key">کلید API</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="api-key"
+                      type="password"
+                      placeholder="کلید API خود را وارد کنید"
+                      value={apiKey}
+                      onChange={handleApiKeyChange}
+                    />
+                    <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                  </div>
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -540,14 +538,14 @@ export default function CourseScheduler() {
             <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="pdf">
+            <Tabs defaultValue="manual">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF</TabsTrigger>
+                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF (بزودی)</TabsTrigger>
                 <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
-                 <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند." />
+                 <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند و بزودی فعال خواهد شد. لطفاً کلید API خود را در تنظیمات وارد کنید." />
               </TabsContent>
                <TabsContent value="excel" className="pt-4">
                  <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
@@ -591,7 +589,7 @@ export default function CourseScheduler() {
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
                         <FileUp className="h-10 w-10 mb-4" />
                         <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
-                        <p className="text-sm">برای شروع، یک فایل PDF، اکسل یا به صورت دستی درس اضافه کنید.</p>
+                        <p className="text-sm">برای شروع، یک فایل اکسل یا به صورت دستی درس اضافه کنید.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -660,8 +658,8 @@ export default function CourseScheduler() {
             <Card className="shadow-lg">
               <AccordionTrigger className="p-6 text-right [&[data-state=open]]:border-b">
                   <CardHeader className="p-0">
-                    <CardTitle className="flex items-center gap-2"><WandSparkles /> اولویت‌های شما</CardTitle>
-                    <CardDescription>به هوش مصنوعی بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
+                    <CardDescription>به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                   </CardHeader>
               </AccordionTrigger>
               <AccordionContent>
@@ -696,7 +694,7 @@ export default function CourseScheduler() {
       <div className="lg:col-span-3">
         <Tabs defaultValue="ai-schedule">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی AI</TabsTrigger>
+            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
             <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="ai-schedule">

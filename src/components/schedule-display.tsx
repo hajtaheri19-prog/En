@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
-import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon } from "lucide-react";
+import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon, BrainCircuit } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -338,7 +338,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             برنامه هفتگی
             </CardTitle>
             <CardDescription>
-                {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط هوش مصنوعی."}
+                {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط تحلیلگر سیستم."}
             </CardDescription>
         </div>
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
@@ -455,8 +455,8 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 )}
                 {scheduleResult.rationale && (
                    <Alert>
-                    <Lightbulb className="h-4 w-4" />
-                    <AlertTitle className="font-headline">منطق هوش مصنوعی</AlertTitle>
+                    <BrainCircuit className="h-4 w-4" />
+                    <AlertTitle className="font-headline">منطق تحلیلگر سیستم</AlertTitle>
                     <AlertDescription>
                       {scheduleResult.rationale}
                     </AlertDescription>
