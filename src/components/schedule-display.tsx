@@ -28,7 +28,7 @@ interface ScheduleDisplayProps {
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
-const timeSlots = Array.from({ length: 14 }, (_, i) => `${i + 7}:00`); // 7:00 to 20:00
+const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 7}:00`); // 7:00 to 21:00
 
 const dayToGridCol = (day: string) => {
   const d = day.trim();
@@ -70,22 +70,29 @@ const getGridPosition = (timeslot: string) => {
     const startRow = timeToGridRow(startTime);
     const endRow = timeToGridRow(endTime);
 
-    const durationInRows = endRow - startRow;
+    // This is the duration in hours (e.g., 2.5 for a 2.5-hour class)
+    const durationInHours = endRow - startRow;
     
-    if (gridColumn === 0 || !startRow || !durationInRows) return null;
+    if (gridColumn === 0 || !startRow || !durationInHours || durationInHours <= 0) return null;
 
-    const gridRowStart = Math.floor(startRow) + 1; // CSS grid rows start at 1
-    const span = Math.ceil(durationInRows);
+    // The grid row starts from the beginning of the hour
+    // e.g. 7:30 (startRow 1.5) starts on CSS grid row 2 (index 1 + 1)
+    const gridRowStart = Math.floor(startRow) + 1;
+    
+    // The span is how many rows it covers, rounding up for partials
+    const rowSpan = Math.ceil(startRow + durationInHours) - Math.floor(startRow);
 
-    // Adjust for fractional start times (like 7:30)
-    const topOffset = (startRow - Math.floor(startRow)) * 100; // As a percentage
+    // Calculate the top offset for classes not starting on the hour
+    // e.g. 7:30 (startRow 1.5) -> (1.5 - 1) * 100 = 50%
+    const topOffsetPercentage = (startRow - Math.floor(startRow)) * 100;
 
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / span ${span}`,
-      top: `${topOffset}%`,
-      // Height should also be based on duration
-      height: `calc(${durationInRows * 100}% - 2px)`
+      // e.g., grid-row: 2 / span 3
+      gridRow: `${gridRowStart} / span ${rowSpan}`,
+      // Height is calculated based on exact duration in hours relative to row height
+      height: `calc(${durationInHours * 100}% - 2px)`,
+      top: `${topOffsetPercentage}%`,
     };
   } catch (e) {
     console.error("Error parsing timeslot:", timeslot, e);
@@ -186,7 +193,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`absolute p-2 rounded-lg border text-xs flex flex-col justify-center shadow-sm w-[calc(100%-4px)] ${colorClasses[courseColorIndex]}`}
+            className={`absolute p-1.5 rounded-md border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)] ${colorClasses[courseColorIndex]}`}
             style={{ 
               gridColumn: pos.gridColumn, 
               gridRow: pos.gridRow,
@@ -194,9 +201,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
               height: pos.height,
             }}
           >
-            <p className="font-bold">{item.courseName}</p>
-            <p className="text-xs opacity-80">{item.instructor}</p>
-            <p className="text-xs opacity-60 mt-1">{locations[tsIndex] || item.location}</p>
+            <p className="font-bold truncate">{item.courseName}</p>
+            <p className="opacity-80 truncate">{item.instructor}</p>
+            <p className="opacity-60 mt-0.5 truncate">{locations[tsIndex] || item.location}</p>
           </div>
         );
       });
@@ -280,7 +287,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           renderSkeleton()
         ) : (
           <>
-             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(14,45px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
+             <div ref={scheduleRef} className="relative grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[auto_repeat(15,40px)] gap-0.5 w-full bg-card p-4 rounded-lg border">
                 {/* Headers */}
                 <div className="row-span-1 col-span-1 sticky top-0 z-10 bg-card"></div>
                 {days.map(day => <div key={day} className="row-span-1 col-span-1 text-center font-semibold text-muted-foreground text-sm p-2 sticky top-0 z-10 bg-card">{day}</div>)}
@@ -288,7 +295,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {/* Time slots & Grid Lines */}
                 {timeSlots.map((time, index) => (
                    <React.Fragment key={time}>
-                    <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-center`}>{time}</div>
+                    <div className={`row-start-${index + 2} col-span-1 text-center font-mono text-muted-foreground text-xs p-2 self-start`}>{time}</div>
                      {[...Array(6)].map((_, dayIndex) => (
                         <div key={`${index}-${dayIndex}`} className={`row-start-${index + 2} col-start-${dayIndex + 2} border-t border-r border-dashed border-border/50`}></div>
                      ))}
@@ -297,7 +304,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 
                 
                 {/* Schedule Items Container */}
-                <div className="absolute inset-0 top-[41px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(14,45px)] gap-1">
+                <div className="absolute inset-0 top-[44px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(15,40px)] gap-1">
                   {scheduleItems.length === 0 && (
                      <div className="col-start-2 col-span-full row-span-full flex items-center justify-center text-center">
                         <p className="text-muted-foreground">
@@ -349,3 +356,5 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     </Card>
   );
 }
+
+    
