@@ -3,14 +3,14 @@
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
 import { suggestOptimalSchedule } from "@/ai/flows/suggest-optimal-schedule";
 import type { Course } from "@/types";
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import CourseSelection from "./course-selection";
 import ScheduleDisplay from "./schedule-display";
 import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -31,6 +31,7 @@ export default function CourseScheduler() {
   const [isProcessing, startProcessingTransition] = useTransition();
   const [apiKey, setApiKey] = useState<string>('');
   const { toast } = useToast();
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
@@ -163,17 +164,22 @@ export default function CourseScheduler() {
             skipEmptyLines: true,
             complete: (results) => {
                 try {
+                    if (!results.data.length || !results.meta.fields) {
+                        throw new Error('فایل CSV خالی است یا هدر ندارد.');
+                    }
+                    const requiredColumns = ['code', 'name', 'instructorName', 'category', 'timeslots', 'locations'];
+                    const missingColumns = requiredColumns.filter(col => !results.meta.fields!.includes(col));
+                    if (missingColumns.length > 0) {
+                        throw new Error(`فایل CSV ستون‌های الزامی زیر را ندارد: ${missingColumns.join(', ')}`);
+                    }
+
                     const parsedCourses: Omit<Course, "id">[] = results.data.map((row: any) => {
-                        if (!row.code || !row.name || !row.instructorName || !row.category || !row.timeslots || !row.locations) {
-                            throw new Error('فایل CSV دارای ستون‌های مورد نیاز نیست. ستون‌های الزامی: code, name, instructorName, category, timeslots, locations');
-                        }
                         const instructorId = row.instructorName.replace(/\s+/g, '-').toLowerCase();
                         return {
                             code: row.code,
                             name: row.name,
                             instructors: [{ id: instructorId, name: row.instructorName }],
                             category: row.category,
-                            // Assuming timeslots and locations are separated by a semicolon in the CSV
                             timeslots: row.timeslots.split(';').map((s: string) => s.trim()),
                             locations: row.locations.split(';').map((s: string) => s.trim()),
                             group: row.group || undefined,
@@ -215,7 +221,62 @@ export default function CourseScheduler() {
             },
         });
     });
-};
+  };
+
+  const handleBackup = () => {
+    if (availableCourses.length === 0) {
+      toast({
+        title: "هیچ درسی برای پشتیبان‌گیری وجود ندارد",
+        variant: "destructive"
+      });
+      return;
+    }
+    const dataStr = JSON.stringify(availableCourses, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = 'course_backup.json';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    toast({
+        title: "پشتیبان‌گیری موفق",
+        description: "لیست دروس شما در فایل course_backup.json ذخیره شد."
+    })
+  };
+
+  const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+            throw new Error("محتوای فایل قابل خواندن نیست.")
+        }
+        const restoredCourses = JSON.parse(text);
+        // Basic validation
+        if (Array.isArray(restoredCourses) && restoredCourses.every(c => c.id && c.code && c.name)) {
+          setAvailableCourses(restoredCourses);
+          toast({
+            title: "بازیابی موفق",
+            description: `${restoredCourses.length} درس از فایل پشتیبان بازیابی شد.`
+          });
+        } else {
+          throw new Error("فرمت فایل پشتیبان صحیح نیست.");
+        }
+      } catch (error: any) {
+        toast({
+          title: "خطا در بازیابی",
+          description: error.message || "فایل پشتیبان نامعتبر است.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ""; // Reset file input
+  };
   
   const handleRemoveCourse = (courseId: string) => {
     setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
@@ -278,15 +339,15 @@ export default function CourseScheduler() {
           <CardContent>
             <Tabs defaultValue="pdf">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> فایل PDF</TabsTrigger>
-                <TabsTrigger value="csv" disabled={isProcessing}><Sheet className="ml-2" /> فایل اکسل (CSV)</TabsTrigger>
+                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF</TabsTrigger>
+                <TabsTrigger value="csv" disabled={isProcessing}><Sheet className="ml-2" /> CSV</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
                  <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="فایل PDF چارت درسی ارائه شده توسط دانشگاه را اینجا بارگذاری کنید تا دروس به صورت خودکار استخراج شوند." />
               </TabsContent>
                <TabsContent value="csv" className="pt-4">
-                 <CourseSelection onFileUpload={handleCsvUpload} isProcessing={isProcessing} accept=".csv" title="آپلود چارت درسی (CSV)" description="فایل اکسل خود را با فرمت CSV ذخیره کرده و اینجا آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
+                 <CourseSelection onFileUpload={handleCsvUpload} isProcessing={isProcessing} accept=".csv" title="آپلود چارت درسی (CSV)" description="فایل اکسل (با فرمت CSV) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group باشند." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
                 <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} />
@@ -302,12 +363,23 @@ export default function CourseScheduler() {
                 <CardDescription>
                     {availableCourses.length} درس در {Object.keys(courseGroups).length} گروه
                 </CardDescription>
-                {availableCourses.length > 0 && (
-                    <Button variant="destructive" size="sm" onClick={handleClearAllCourses} disabled={isProcessing}>
-                        <Trash2 className="ml-2 h-4 w-4" />
-                        پاک کردن همه
+                 <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
+                        <Save className="ml-2 h-4 w-4" />
+                        ذخیره
                     </Button>
-                )}
+                     <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing}>
+                        <FolderOpen className="ml-2 h-4 w-4" />
+                        بازیابی
+                    </Button>
+                    <input
+                      type="file"
+                      ref={restoreInputRef}
+                      onChange={handleRestore}
+                      className="hidden"
+                      accept="application/json"
+                    />
+                </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -341,6 +413,12 @@ export default function CourseScheduler() {
                     </div>
                 )}
              </ScrollArea>
+             {availableCourses.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={handleClearAllCourses} disabled={isProcessing} className="w-full mt-4">
+                    <Trash2 className="ml-2 h-4 w-4" />
+                    پاک کردن همه دروس
+                </Button>
+            )}
           </CardContent>
         </Card>
         
@@ -388,5 +466,3 @@ export default function CourseScheduler() {
     </div>
   );
 }
-
-    

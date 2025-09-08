@@ -23,7 +23,7 @@ export default function AiAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(scrollToBottom, [history]);
+  useEffect(scrollToBottom, [history, isStreaming]);
 
 
   const handleSendMessage = () => {
@@ -50,12 +50,18 @@ export default function AiAssistant() {
           return;
         }
 
+        setHistory(prev => [...prev, { role: "model", content: [{ text: "" }] }]);
+
         const response = await menuSuggestionFlow({
           history: newHistory.slice(0, -1), // Send history without the latest user message
           context: currentContext,
         });
-
-        setHistory(prev => [...prev, { role: "model", content: [{ text: response }] }]);
+        
+        setHistory(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1].content[0].text = response;
+          return newHistory;
+        });
 
       } catch (error) {
         console.error("Error calling AI flow:", error);
@@ -64,7 +70,8 @@ export default function AiAssistant() {
           description: "لطفاً اتصال اینترنت و کلید API خود را بررسی کنید.",
           variant: "destructive",
         });
-        setHistory(prev => prev.slice(0, -1)); // Remove user message on error
+        // Remove the user message and the empty model message on error
+        setHistory(prev => prev.slice(0, -2));
       }
     });
   };
@@ -83,22 +90,18 @@ export default function AiAssistant() {
           <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
             <div className={`rounded-lg px-4 py-2 max-w-[80%] whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary/20' : 'bg-secondary'}`}>
-              <p className="text-sm">{msg.content[0].text}</p>
+               {msg.content[0].text ? (
+                <p className="text-sm">{msg.content[0].text}</p>
+              ) : (
+                 <Loader2 className="h-5 w-5 animate-spin" />
+              )}
             </div>
             {msg.role === 'user' && <User className="h-6 w-6 flex-shrink-0" />}
           </div>
         ))}
-         {isStreaming && (
-            <div className="flex items-start gap-3">
-                <Bot className="h-6 w-6 text-primary flex-shrink-0" />
-                <div className="rounded-lg px-4 py-2 bg-secondary">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-            </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="relative mt-auto">
+      <div className="relative mt-auto border-t pt-4">
         <Textarea
           placeholder="از من بپرسید..."
           value={context}
@@ -115,7 +118,7 @@ export default function AiAssistant() {
         <Button
           type="submit"
           size="icon"
-          className="absolute bottom-2.5 left-2.5"
+          className="absolute bottom-6 left-2.5"
           onClick={handleSendMessage}
           disabled={isStreaming || !context.trim()}
         >
@@ -126,5 +129,3 @@ export default function AiAssistant() {
     </div>
   );
 }
-
-    

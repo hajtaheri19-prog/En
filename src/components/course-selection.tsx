@@ -43,6 +43,13 @@ export default function CourseSelection({
           {description}
         </AlertDescription>
       </Alert>
+      <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept={accept}
+        />
       <Button 
           onClick={() => fileInputRef.current?.click()}
           variant="outline"
@@ -55,17 +62,8 @@ export default function CourseSelection({
           ) : (
             <FileUp className="h-4 w-4 ml-2" />
           )}
-          <span>{isProcessing ? "در حال پردازش..." : `انتخاب و آپلود فایل (${accept})`}</span>
+          <span>{isProcessing ? "در حال پردازش..." : `انتخاب و آپلود فایل (${accept.toUpperCase()})`}</span>
         </Button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept={accept}
-        />
     </div>
   );
 }
-
-    
