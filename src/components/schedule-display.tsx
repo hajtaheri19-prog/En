@@ -8,10 +8,11 @@ import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Papa from 'papaparse';
+import { Course } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +22,8 @@ import {
 
 
 interface ScheduleDisplayProps {
-  scheduleResult: SuggestOptimalScheduleOutput | null;
+  scheduleResult?: SuggestOptimalScheduleOutput | null;
+  manualCourses?: Course[];
   isLoading: boolean;
 }
 
@@ -90,8 +92,25 @@ const getGridPosition = (timeslot: string) => {
 };
 
 
-export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleDisplayProps) {
+export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
+  
+  const isManualMode = manualCourses !== undefined;
+
+  const scheduleItems = useMemo(() => {
+    if (isManualMode) {
+      return manualCourses!.map(course => ({
+        courseCode: course.code,
+        courseName: course.name,
+        instructor: course.instructors.map(i => i.name).join(', '),
+        timeslot: course.timeslots,
+        location: course.locations,
+        group: course.group,
+      }));
+    }
+    return scheduleResult?.schedule || [];
+  }, [manualCourses, scheduleResult, isManualMode]);
+
 
   const downloadAsPng = useCallback(() => {
     if (scheduleRef.current === null) return;
@@ -117,13 +136,13 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
   }, [scheduleRef]);
 
   const downloadAsCsv = useCallback(() => {
-    if (!scheduleResult || scheduleResult.schedule.length === 0) return;
-    const csvData = scheduleResult.schedule.map(item => ({
+    if (scheduleItems.length === 0) return;
+    const csvData = scheduleItems.map(item => ({
       'نام درس': item.courseName,
       'کد درس': item.courseCode,
       'استاد': item.instructor,
-      'زمان': item.timeslot,
-      'مکان': item.location,
+      'زمان': Array.isArray(item.timeslot) ? item.timeslot.join('; ') : item.timeslot,
+      'مکان': Array.isArray(item.location) ? item.location.join('; ') : item.location,
       'گروه': item.group || '',
     }));
     const csv = Papa.unparse(csvData);
@@ -134,14 +153,14 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [scheduleResult]);
+  }, [scheduleItems]);
 
   const renderScheduleItems = () => {
-    if (!scheduleResult || scheduleResult.schedule.length === 0) {
+    if (scheduleItems.length === 0) {
       return null;
     }
     
-    return scheduleResult.schedule.flatMap((item, index) => {
+    return scheduleItems.flatMap((item, index) => {
       const timeslots = Array.isArray(item.timeslot) ? item.timeslot : [item.timeslot];
       const locations = Array.isArray(item.location) ? item.location : [item.location];
 
@@ -218,11 +237,13 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
         <div>
             <CardTitle className="font-headline flex items-center gap-2">
             <CalendarDays />
-            برنامه هفتگی پیشنهادی
+            برنامه هفتگی
             </CardTitle>
-            <CardDescription>برنامه بهینه پیشنهاد شده توسط هوش مصنوعی در اینجا نمایش داده می‌شود.</CardDescription>
+            <CardDescription>
+                {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط هوش مصنوعی."}
+            </CardDescription>
         </div>
-         {scheduleResult && !isLoading && (
+         {scheduleItems.length > 0 && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -270,16 +291,21 @@ export default function ScheduleDisplay({ scheduleResult, isLoading }: ScheduleD
                 
                 {/* Schedule Items Container */}
                 <div className="absolute inset-0 top-[41px] right-0 p-1 grid grid-cols-[auto_repeat(6,1fr)] grid-rows-[repeat(13,45px)] gap-1">
-                  {(!scheduleResult || scheduleResult.schedule.length === 0) && (
+                  {scheduleItems.length === 0 && (
                      <div className="col-start-2 col-span-full row-span-full flex items-center justify-center text-center">
-                        <p className="text-muted-foreground">پس از افزودن دروس و تعیین اولویت‌ها، <br /> بهترین برنامه ممکن برای شما اینجا ساخته می‌شود.</p>
+                        <p className="text-muted-foreground">
+                            {isManualMode
+                                ? "درسی برای نمایش انتخاب نشده است. از لیست دروس، موارد دلخواه را تیک بزنید."
+                                : "پس از افزودن دروس و تعیین اولویت‌ها، بهترین برنامه ممکن برای شما اینجا ساخته می‌شود."
+                            }
+                        </p>
                      </div>
                   )}
                   {renderScheduleItems()}
                 </div>
             </div>
 
-            {scheduleResult && (
+            {!isManualMode && scheduleResult && (
               <div className="mt-6 space-y-4">
                  {scheduleResult.recommendedGroup && (
                   <Alert variant="default" className="bg-primary/10 border-primary/20">

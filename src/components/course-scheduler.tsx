@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -21,10 +21,12 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { Checkbox } from "./ui/checkbox";
 
 
 export default function CourseScheduler() {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [manuallySelectedCourseIds, setManuallySelectedCourseIds] = useState<Set<string>>(new Set());
   const [studentPreferences, setStudentPreferences] = useState<StudentPreferences>({
       instructorPreferences: [],
   });
@@ -306,15 +308,38 @@ export default function CourseScheduler() {
   
   const handleRemoveCourse = (courseId: string) => {
     setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
+    setManuallySelectedCourseIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(courseId);
+        return newSet;
+    });
   };
   
   const handleClearAllCourses = () => {
     setAvailableCourses([]);
+    setManuallySelectedCourseIds(new Set());
     toast({
         title: "همه دروس پاک شدند",
         description: "لیست دروس موجود اکنون خالی است.",
     });
   };
+
+  const handleManualCourseSelect = (courseId: string, isSelected: boolean) => {
+      setManuallySelectedCourseIds(prev => {
+          const newSet = new Set(prev);
+          if (isSelected) {
+              newSet.add(courseId);
+          } else {
+              newSet.delete(courseId);
+          }
+          return newSet;
+      });
+  };
+
+  const manuallySelectedCourses = useMemo(() => {
+    return availableCourses.filter(course => manuallySelectedCourseIds.has(course.id));
+  }, [availableCourses, manuallySelectedCourseIds]);
+
 
   const courseGroups = useMemo(() => {
     const groups: Record<string, Course[]> = {};
@@ -424,10 +449,18 @@ export default function CourseScheduler() {
                                 <div className="space-y-2">
                                     {courses.map(course => (
                                         <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
-                                            <div className="flex-1">
-                                                <p className="font-medium text-sm">{course.name} ({course.code})</p>
-                                                <p className="text-xs text-muted-foreground">{course.timeslots.join('، ')}</p>
-                                                <p className="text-xs text-muted-foreground">کلاس: {course.locations.join('، ')}</p>
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <Checkbox 
+                                                  id={`manual-select-${course.id}`}
+                                                  checked={manuallySelectedCourseIds.has(course.id)}
+                                                  onCheckedChange={(checked) => handleManualCourseSelect(course.id, !!checked)}
+                                                  aria-label={`انتخاب درس ${course.name}`}
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-sm">{course.name} ({course.code})</p>
+                                                    <p className="text-xs text-muted-foreground">{course.timeslots.join('، ')}</p>
+                                                    <p className="text-xs text-muted-foreground">کلاس: {course.locations.join('، ')}</p>
+                                                </div>
                                             </div>
                                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive flex-shrink-0" onClick={() => handleRemoveCourse(course.id)}>
                                                 <Trash2 className="h-4 w-4" />
@@ -488,7 +521,18 @@ export default function CourseScheduler() {
         </Button>
       </div>
       <div className="lg:col-span-3">
-        <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} />
+        <Tabs defaultValue="ai-schedule">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="ai-schedule"><WandSparkles className="ml-2" /> برنامه پیشنهادی AI</TabsTrigger>
+            <TabsTrigger value="manual-schedule"><Edit className="ml-2" /> برنامه دستی</TabsTrigger>
+          </TabsList>
+          <TabsContent value="ai-schedule">
+            <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} />
+          </TabsContent>
+          <TabsContent value="manual-schedule">
+            <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
