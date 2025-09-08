@@ -67,23 +67,32 @@ const getGridPosition = (timeslot: string) => {
     
     const gridColumn = dayToGridCol(day);
     
-    const startRow = timeToGridRow(startTime);
-    const endRow = timeToGridRow(endTime);
+    const startRowValue = timeToGridRow(startTime);
+    const endRowValue = timeToGridRow(endTime);
 
-    const durationInHours = endRow - startRow;
+    const durationInHours = endRowValue - startRowValue;
     
-    if (gridColumn === 0 || !startRow || !durationInHours || durationInHours <= 0) return null;
+    if (gridColumn === 0 || !startRowValue || durationInHours <= 0) return null;
 
-    const gridRowStart = Math.floor(startRow) + 1;
+    // The grid starts from row 2 (row 1 is for headers).
+    // The time 7:00 corresponds to grid row start 2.
+    // Each hour is a row. 7:00 is top of row 2, 8:00 is top of row 3.
+    // So, row start is Math.floor(startRowValue) + 1
+    const gridRowStart = Math.floor(startRowValue) + 1; // 7:30 (1.5) -> floor(1.5)+1 = 2
     
-    const rowSpan = Math.ceil(startRow + durationInHours) - Math.floor(startRow);
-
-    const topOffsetPercentage = (startRow - Math.floor(startRow)) * 100;
-
+    // The span is how many rows the event covers.
+    const gridRowEnd = Math.ceil(endRowValue) + 1; // 9:00 (3.0) -> ceil(3.0)+1 = 4
+    
+    // The top offset within the starting cell, as a percentage.
+    const topOffsetPercentage = (startRowValue - Math.floor(startRowValue)) * 100;
+    
     return { 
       gridColumn,
-      gridRow: `${gridRowStart} / span ${rowSpan}`,
+      // CSS grid-row format is start / end
+      gridRow: `${gridRowStart} / ${gridRowEnd}`,
+      // The height is based on the exact duration
       height: `calc(${durationInHours * 100}% - 2px)`,
+      // The top is based on the offset within the first hour-slot
       top: `${topOffsetPercentage}%`,
     };
   } catch (e) {
@@ -185,12 +194,13 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`absolute p-1.5 rounded-md border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)] ${colorClasses[courseColorIndex]}`}
+            className={`absolute p-1.5 rounded-md border text-[11px] flex flex-col justify-center overflow-hidden shadow-sm w-[calc(100%-4px)]`}
             style={{ 
               gridColumn: pos.gridColumn, 
               gridRow: pos.gridRow,
               top: pos.top,
               height: pos.height,
+              backgroundColor: colorClasses[courseColorIndex].split(' ')[0], // Example for dynamic colors
             }}
           >
             <p className="font-bold truncate">{item.courseName}</p>
@@ -348,5 +358,3 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     </Card>
   );
 }
-
-    
