@@ -22,7 +22,7 @@ import { Label } from "./ui/label";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Checkbox } from "./ui/checkbox";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { Alert, AlertTitle } from "./ui/alert";
 import EditCourseDialog from "./edit-course-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -693,10 +693,10 @@ export default function CourseScheduler() {
       </div>
       <div className="lg:col-span-3">
         <Tabs defaultValue="system-schedule">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="system-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
-            <TabsTrigger value="ai-schedule" disabled><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
-            <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
+          <TabsList className="flex h-auto flex-col sm:flex-row">
+            <TabsTrigger value="system-schedule" className="w-full"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+            <TabsTrigger value="ai-schedule" disabled className="w-full"><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
+            <TabsTrigger value="manual-schedule" className="w-full"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="system-schedule">
             <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
@@ -741,5 +741,3 @@ export default function CourseScheduler() {
     </>
   );
 }
-
-    
