@@ -366,11 +366,11 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             </DropdownMenu>
           )}
       </CardHeader>
-      <CardContent className="pr-0 sm:pr-6">
+      <CardContent className="sm:pr-6">
         {isLoading ? (
           renderSkeleton()
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto pb-4">
              <div
                 ref={scheduleRef} 
                 className="grid gap-px bg-background p-1 min-w-[900px] border border-border"

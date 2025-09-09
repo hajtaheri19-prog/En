@@ -126,12 +126,12 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
             <FormLabel>اولویت استاد برای دروس عمومی</FormLabel>
             <FormDescription>برای دروسی که گروه مشخصی ندارند (عمومی)، می‌توانید استاد دلخواه خود را مشخص کنید.</FormDescription>
             {fields.map((field, index) => (
-                <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
+                <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-2 border rounded-lg bg-secondary/30">
                     <FormField
                     control={form.control}
                     name={`instructorPreferences.${index}.courseCode`}
                     render={({ field }) => (
-                        <FormItem className="flex-1">
+                        <FormItem className="flex-1 w-full">
                             <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={isProcessing}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="درس عمومی" /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -148,7 +148,7 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
                     control={form.control}
                     name={`instructorPreferences.${index}.instructorId`}
                     render={({ field }) => (
-                        <FormItem className="flex-1">
+                        <FormItem className="flex-1 w-full">
                              <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={isProcessing}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="استاد ترجیحی" /></SelectTrigger></FormControl>
                                 <SelectContent>
@@ -161,7 +161,7 @@ export default function StudentPreferencesForm({ preferences, onPreferencesChang
                         </FormItem>
                     )}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isProcessing} className="shrink-0">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isProcessing} className="shrink-0 mt-2 sm:mt-0">
                         <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                 </div>

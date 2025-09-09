@@ -539,10 +539,10 @@ export default function CourseScheduler() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="manual">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="pdf" disabled={isProcessing}><FileUp className="ml-2" /> PDF (بزودی)</TabsTrigger>
-                <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل</TabsTrigger>
-                <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
+              <TabsList className="flex flex-col sm:flex-row h-auto">
+                <TabsTrigger value="pdf" disabled={isProcessing} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF (بزودی)</TabsTrigger>
+                <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
+                <TabsTrigger value="manual" disabled={isProcessing} className="w-full sm:w-auto"><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
               <TabsContent value="pdf" className="pt-4">
                  <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند و بزودی فعال خواهد شد. لطفاً کلید API خود را در تنظیمات وارد کنید." />
@@ -560,7 +560,7 @@ export default function CourseScheduler() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
-             <div className="flex justify-between items-center">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardDescription>
                     {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                 </CardDescription>
@@ -584,7 +584,7 @@ export default function CourseScheduler() {
             </div>
           </CardHeader>
           <CardContent>
-             <ScrollArea className="h-[250px] pr-3">
+             <ScrollArea className="h-[300px] pr-3">
                 {availableCourses.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
                         <FileUp className="h-10 w-10 mb-4" />

@@ -180,8 +180,8 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
         <div className="space-y-4">
           <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
           {fields.map((field, index) => (
-            <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
-               <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-2 border rounded-lg bg-secondary/30">
+               <div className="w-full flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                  <FormField
                   control={form.control}
                   name={`schedule.${index}.day`}
@@ -229,7 +229,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
                 />
                </div>
                {fields.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0 mt-2 sm:mt-0">
                       <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 )}
