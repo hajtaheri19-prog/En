@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertTitle } from "./ui/alert";
 import EditCourseDialog from "./edit-course-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Skeleton } from "./ui/skeleton";
 
 const toPersianDigits = (num: string) => {
     if (!num) return "";
@@ -35,6 +36,7 @@ const toPersianDigits = (num: string) => {
 };
 
 export default function CourseScheduler() {
+  const [isLoading, setIsLoading] = useState(true);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [manuallySelectedCourseIds, setManuallySelectedCourseIds] = useState<Set<string>>(new Set());
   const [studentPreferences, setStudentPreferences] = useState<StudentPreferences>({
@@ -55,39 +57,52 @@ export default function CourseScheduler() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   useEffect(() => {
-    const storedProvider = localStorage.getItem('api-provider') || 'gemini';
-    setApiProvider(storedProvider);
+    try {
+      const storedProvider = localStorage.getItem('api-provider') || 'gemini';
+      setApiProvider(storedProvider);
 
-    const storedApiKey = localStorage.getItem(`${storedProvider}-api-key`);
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      (window as any).__GEMINI_API_KEY__ = storedApiKey;
-    }
+      const storedApiKey = localStorage.getItem(`${storedProvider}-api-key`);
+      if (storedApiKey) {
+        setApiKey(storedApiKey);
+        if (typeof window !== 'undefined') {
+          (window as any).__GEMINI_API_KEY__ = storedApiKey;
+        }
+      }
 
-    const storedTimeSlots = localStorage.getItem('course-time-slots');
-    if(storedTimeSlots) {
-        setTimeSlots(JSON.parse(storedTimeSlots));
-    }
-    const storedCourseGroups = localStorage.getItem('course-groups');
-    if(storedCourseGroups) {
-        setCourseGroups(JSON.parse(storedCourseGroups));
+      const storedTimeSlots = localStorage.getItem('course-time-slots');
+      if(storedTimeSlots) {
+          setTimeSlots(JSON.parse(storedTimeSlots));
+      }
+      const storedCourseGroups = localStorage.getItem('course-groups');
+      if(storedCourseGroups) {
+          setCourseGroups(JSON.parse(storedCourseGroups));
+      }
+    } catch (error) {
+        console.error("Failed to load data from localStorage", error);
+        toast({ title: "خطا در بارگذاری اطلاعات", description: "اطلاعات ذخیره شده در مرورگر قابل خواندن نیست.", variant: "destructive"})
+    } finally {
+        setIsLoading(false);
     }
   }, []);
   
   useEffect(() => {
+      if (isLoading) return;
       localStorage.setItem('course-time-slots', JSON.stringify(timeSlots));
-  }, [timeSlots])
+  }, [timeSlots, isLoading])
 
   useEffect(() => {
+    if (isLoading) return;
     localStorage.setItem('course-groups', JSON.stringify(courseGroups));
-  }, [courseGroups])
+  }, [courseGroups, isLoading])
 
   const handleApiProviderChange = (provider: string) => {
     setApiProvider(provider);
     localStorage.setItem('api-provider', provider);
     const storedApiKey = localStorage.getItem(`${provider}-api-key`) || '';
     setApiKey(storedApiKey);
-    (window as any).__GEMINI_API_KEY__ = storedApiKey;
+     if (typeof window !== 'undefined') {
+        (window as any).__GEMINI_API_KEY__ = storedApiKey;
+    }
   }
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +112,7 @@ export default function CourseScheduler() {
 
   const handleSaveApiKey = () => {
     localStorage.setItem(`${apiProvider}-api-key`, apiKey);
-    if (apiProvider === 'gemini') {
+     if (typeof window !== 'undefined') {
         (window as any).__GEMINI_API_KEY__ = apiKey;
     }
     toast({
@@ -440,7 +455,16 @@ export default function CourseScheduler() {
   const handleRemoveCourseGroup = (id: string) => {
       setCourseGroups(prev => prev.filter(cg => cg.id !== id));
   }
-
+  
+  if (isLoading) {
+    return (
+        <div className="space-y-8">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-96 w-full" />
+        </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -570,7 +594,7 @@ export default function CourseScheduler() {
           <CardContent className="p-4 sm:p-6">
             <Tabs defaultValue="manual">
               <TabsList className="flex flex-col sm:flex-row h-auto">
-                <TabsTrigger value="pdf" disabled={isProcessing} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
+                <TabsTrigger value="pdf" disabled={isProcessing || !apiKey} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
                 <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
                 <TabsTrigger value="manual" disabled={isProcessing} className="w-full sm:w-auto"><ListPlus className="ml-2" /> دستی</TabsTrigger>
               </TabsList>
@@ -726,7 +750,7 @@ export default function CourseScheduler() {
         <Tabs defaultValue="system-schedule">
           <TabsList className="flex h-auto flex-col sm:flex-row">
             <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
-            <TabsTrigger value="ai-schedule" className="w-full sm:w-auto"><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
+            <TabsTrigger value="ai-schedule" className="w-full sm:w-auto" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
             <TabsTrigger value="manual-schedule" className="w-full sm:w-auto"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="system-schedule">
