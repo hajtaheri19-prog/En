@@ -477,7 +477,7 @@ export default function CourseScheduler() {
                     <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+                    <div className="flex flex-col sm:flex-row items-end gap-2">
                         <div className="flex-1 space-y-2">
                             <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
                             <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
