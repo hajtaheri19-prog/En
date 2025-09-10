@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
@@ -423,8 +424,8 @@ export default function CourseScheduler() {
 
   return (
     <>
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-      <div className="lg:col-span-2 flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="api-settings" className="border-b-0">
@@ -699,7 +700,8 @@ export default function CourseScheduler() {
             )}
         </Button>
       </div>
-      <div className="lg:col-span-3">
+
+      <div className="w-full">
         <Tabs defaultValue="system-schedule">
           <TabsList className="flex h-auto flex-col sm:flex-row">
             <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
@@ -749,3 +751,5 @@ export default function CourseScheduler() {
     </>
   );
 }
+
+    
