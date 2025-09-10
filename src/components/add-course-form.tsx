@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Course, TimeSlot, CourseGroup } from "@/types";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { Copy, PlusCircle, Trash2 } from "lucide-react";
+import { useMemo } from "react";
 
 const scheduleSchema = z.object({
   day: z.string().nonempty({ message: "انتخاب روز الزامی است." }),
@@ -47,11 +48,12 @@ interface AddCourseFormProps {
   isProcessing: boolean;
   timeSlots: TimeSlot[];
   courseGroups: CourseGroup[];
+  availableCourses: Course[];
 }
 
 const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 
-export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGroups }: AddCourseFormProps) {
+export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGroups, availableCourses }: AddCourseFormProps) {
   const form = useForm<AddCourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -67,6 +69,26 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
     control: form.control,
     name: "schedule"
   });
+
+  const uniqueCourses = useMemo(() => {
+    const uniqueMap = new Map<string, Course>();
+    availableCourses.forEach(course => {
+        if (!uniqueMap.has(course.code)) {
+            uniqueMap.set(course.code, course);
+        }
+    });
+    return Array.from(uniqueMap.values());
+  }, [availableCourses]);
+
+  const handleCourseCopy = (courseCode: string) => {
+    const courseToCopy = uniqueCourses.find(c => c.code === courseCode);
+    if (courseToCopy) {
+        form.setValue("name", courseToCopy.name);
+        form.setValue("code", courseToCopy.code);
+        form.setValue("category", courseToCopy.category);
+    }
+  }
+
 
   function onSubmit(values: AddCourseFormValues) {
     const instructorId = values.instructorName.replace(/\s+/g, '-').toLowerCase();
@@ -90,6 +112,22 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        
+        <div className="space-y-2">
+            <Label>کپی اطلاعات از درس موجود (اختیاری)</Label>
+            <div className="flex items-center gap-2">
+                <Select onValueChange={handleCourseCopy} dir="rtl" disabled={uniqueCourses.length === 0}>
+                   <SelectTrigger className="w-full">
+                      <SelectValue placeholder={uniqueCourses.length === 0 ? "درسی برای کپی وجود ندارد" : "یک درس را برای کپی کردن انتخاب کنید"} />
+                    </SelectTrigger>
+                  <SelectContent>
+                    {uniqueCourses.map(course => <SelectItem key={course.id} value={course.code}>{course.name} ({course.code})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+            </div>
+        </div>
+
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -250,5 +288,3 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
     </Form>
   );
 }
-
-    

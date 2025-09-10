@@ -605,7 +605,13 @@ export default function CourseScheduler() {
                  <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
-                <AddCourseForm onAddCourse={handleAddCourse} isProcessing={isProcessing} timeSlots={timeSlots} courseGroups={courseGroups} />
+                <AddCourseForm 
+                    onAddCourse={handleAddCourse} 
+                    isProcessing={isProcessing} 
+                    timeSlots={timeSlots} 
+                    courseGroups={courseGroups}
+                    availableCourses={availableCourses}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
