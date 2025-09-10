@@ -38,7 +38,7 @@ export default function Home() {
                     </Button>
                   </SidebarTrigger>
                   <BookHeart className="h-6 w-6 text-primary hidden sm:flex" />
-                   <h1 className="font-headline text-xl md:text-2xl font-bold tracking-tighter">
+                   <h1 className="font-headline text-lg sm:text-xl md:text-2xl font-bold tracking-tighter">
                     انتخاب واحد هوشمند KPU
                   </h1>
                 </div>

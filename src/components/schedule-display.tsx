@@ -331,7 +331,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
   return (
     <Card className="shadow-lg h-full sticky top-8">
-      <CardHeader className="flex flex-row items-start sm:items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
             <CardTitle className="font-headline flex items-center gap-2">
             <CalendarDays />
@@ -366,7 +366,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             </DropdownMenu>
           )}
       </CardHeader>
-      <CardContent className="sm:pr-6">
+      <CardContent className="p-2 sm:p-6">
         {isLoading ? (
           renderSkeleton()
         ) : (
@@ -405,7 +405,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                  
                 {scheduleItems.length === 0 && (
                   <div 
-                      className="flex items-center justify-center text-center text-muted-foreground p-8 col-start-1 col-end-[-1] row-start-2 row-end-[-1]"
+                      className="flex items-center justify-center text-center text-muted-foreground p-8 col-start-1 col-end-[-1] row-start-2 row-end-[-1] text-sm sm:text-base"
                   >
                         {timeSlots.length === 0
                           ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."

@@ -431,7 +431,7 @@ export default function CourseScheduler() {
             <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
             <CardDescription>برای فعالسازی قابلیت‌های هوشمند در آینده، کلید API را وارد کنید.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
@@ -468,21 +468,21 @@ export default function CourseScheduler() {
                     <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                     <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex items-end gap-2">
-                        <div className="flex-1">
+                <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+                        <div className="flex-1 space-y-2">
                             <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
                             <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
                         </div>
-                        <div className="w-24">
+                        <div className="flex-1 space-y-2">
                             <Label htmlFor="ts-start" className="text-xs">شروع</Label>
                             <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
                         </div>
-                        <div className="w-24">
+                        <div className="flex-1 space-y-2">
                             <Label htmlFor="ts-end" className="text-xs">پایان</Label>
                             <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
                         </div>
-                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0 mt-4 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
                     </div>
                     {timeSlots.length > 0 && (
                         <ScrollArea className="h-24 mt-4 pr-3">
@@ -506,7 +506,7 @@ export default function CourseScheduler() {
                     <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
                     <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6">
                     <div className="flex items-end gap-2">
                         <div className="flex-1">
                             <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
@@ -537,7 +537,7 @@ export default function CourseScheduler() {
             <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
             <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <Tabs defaultValue="manual">
               <TabsList className="flex flex-col sm:flex-row h-auto">
                 <TabsTrigger value="pdf" disabled={isProcessing} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF (بزودی)</TabsTrigger>
@@ -561,10 +561,10 @@ export default function CourseScheduler() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardDescription>
+                <CardDescription className="mt-1">
                     {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                 </CardDescription>
-                 <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
                         <Save className="ml-1 h-4 w-4" />
                         ذخیره
@@ -583,7 +583,7 @@ export default function CourseScheduler() {
                 </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
              <ScrollArea className="h-[300px] pr-3">
                 {availableCourses.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
@@ -656,14 +656,14 @@ export default function CourseScheduler() {
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="preferences" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="p-6 text-right [&[data-state=open]]:border-b">
+              <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
                   <CardHeader className="p-0">
                     <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
                     <CardDescription>به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                   </CardHeader>
               </AccordionTrigger>
               <AccordionContent>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 p-4 sm:p-6">
                     <StudentPreferencesForm
                         preferences={studentPreferences}
                         onPreferencesChange={setStudentPreferences}
@@ -694,9 +694,9 @@ export default function CourseScheduler() {
       <div className="lg:col-span-3">
         <Tabs defaultValue="system-schedule">
           <TabsList className="flex h-auto flex-col sm:flex-row">
-            <TabsTrigger value="system-schedule" className="w-full"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
-            <TabsTrigger value="ai-schedule" disabled className="w-full"><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
-            <TabsTrigger value="manual-schedule" className="w-full"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
+            <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+            <TabsTrigger value="ai-schedule" disabled className="w-full sm:w-auto"><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
+            <TabsTrigger value="manual-schedule" className="w-full sm:w-auto"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
           </TabsList>
           <TabsContent value="system-schedule">
             <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
