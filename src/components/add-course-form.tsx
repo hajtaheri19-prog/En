@@ -23,6 +23,7 @@ import {
 import type { Course, TimeSlot, CourseGroup } from "@/types";
 import { Copy, PlusCircle, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+import { Label } from "@/components/ui/label";
 
 const scheduleSchema = z.object({
   day: z.string().nonempty({ message: "انتخاب روز الزامی است." }),
