@@ -20,6 +20,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+const toPersianDigits = (num: string) => {
+    const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+    return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)]);
+};
 
 interface ScheduleDisplayProps {
   scheduleResult?: SuggestOptimalScheduleOutput | null;
@@ -387,7 +391,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {sortedTimeSlots.map((ts, index) => (
                   <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
                     <div>{ts.name}</div>
-                    <div className="font-mono">{ts.start}-{ts.end}</div>
+                    <div className="font-mono">{toPersianDigits(ts.start)}-{toPersianDigits(ts.end)}</div>
                   </div>
                 ))}
 
