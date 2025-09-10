@@ -426,41 +426,49 @@ export default function CourseScheduler() {
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
       <div className="lg:col-span-2 flex flex-col gap-6">
         
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
-            <CardDescription>برای فعالسازی قابلیت‌های هوشمند در آینده، کلید API را وارد کنید.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
-                    <Select value={apiProvider} onValueChange={setApiProvider}>
-                        <SelectTrigger id="api-provider">
-                            <SelectValue placeholder="یک ارائه دهنده را انتخاب کنید" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="gemini">Gemini (بزودی)</SelectItem>
-                            <SelectItem value="openai" disabled>OpenAI (بزودی)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">کلید API</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="api-key"
-                      type="password"
-                      placeholder="کلید API خود را وارد کنید"
-                      value={apiKey}
-                      onChange={handleApiKeyChange}
-                    />
-                    <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
-                  </div>
-                </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="api-settings" className="border-b-0">
+            <Card className="shadow-lg">
+                <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
+                    <CardHeader className="p-0">
+                        <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
+                        <CardDescription>برای فعالسازی قابلیت‌های هوشمند در آینده، کلید API را وارد کنید.</CardDescription>
+                    </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent>
+                <CardContent className="pt-6 p-4 sm:p-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
+                            <Select value={apiProvider} onValueChange={setApiProvider}>
+                                <SelectTrigger id="api-provider">
+                                    <SelectValue placeholder="یک ارائه دهنده را انتخاب کنید" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="gemini">Gemini (بزودی)</SelectItem>
+                                    <SelectItem value="openai" disabled>OpenAI (بزودی)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="api-key">کلید API</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="api-key"
+                              type="password"
+                              placeholder="کلید API خود را وارد کنید"
+                              value={apiKey}
+                              onChange={handleApiKeyChange}
+                            />
+                            <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                          </div>
+                        </div>
+                    </div>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+        </Accordion>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="shadow-lg">

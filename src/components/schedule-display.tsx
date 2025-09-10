@@ -405,8 +405,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                  
                 {scheduleItems.length === 0 && (
                   <div 
-                      className="flex items-center justify-center text-center text-muted-foreground p-8 col-start-1 col-end-[-1] row-start-2 row-end-[-1] text-sm sm:text-base"
+                      className="flex flex-col items-center justify-center text-center text-muted-foreground p-8 col-start-1 col-end-[-1] row-start-2 row-end-[-1] text-sm sm:text-base"
                   >
+                        <CalendarDays className="h-12 w-12 mb-4 text-muted-foreground/50"/>
                         {timeSlots.length === 0
                           ? "برای مشاهده جدول، ابتدا حداقل یک سانس زمانی در بخش «مدیریت سانس‌ها» تعریف کنید."
                           : isManualMode
