@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const toPersianDigits = (num: string) => {
+    if (!num) return "";
     const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
     return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)]);
 };
@@ -30,6 +31,7 @@ interface ScheduleDisplayProps {
   manualCourses?: Course[];
   isLoading: boolean;
   timeSlots: TimeSlot[];
+  isAiGenerated?: boolean;
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
@@ -52,7 +54,7 @@ interface Conflict {
 }
 
 
-export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots }: ScheduleDisplayProps) {
+export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots, isAiGenerated = false }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
   
   const isManualMode = manualCourses !== undefined;
@@ -332,6 +334,19 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
       </div>
     </div>
   );
+  
+  const getTitleAndDescription = () => {
+    if (isManualMode) {
+      return { title: "برنامه هفتگی", description: "برنامه ساخته شده توسط شما." };
+    }
+    if (isAiGenerated) {
+        return { title: "برنامه پیشنهادی هوش مصنوعی", description: "برنامه بهینه پیشنهاد شده توسط هوش مصنوعی." };
+    }
+    return { title: "برنامه پیشنهادی سیستم", description: "برنامه بهینه پیشنهاد شده توسط تحلیلگر سیستم." };
+  };
+
+  const { title, description } = getTitleAndDescription();
+
 
   return (
     <Card className="shadow-lg h-full sticky top-8">
@@ -339,10 +354,10 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         <div>
             <CardTitle className="font-headline flex items-center gap-2">
             <CalendarDays />
-            برنامه هفتگی
+            {title}
             </CardTitle>
             <CardDescription>
-                {isManualMode ? "برنامه ساخته شده توسط شما." : "برنامه بهینه پیشنهاد شده توسط تحلیلگر سیستم."}
+                {description}
             </CardDescription>
         </div>
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (

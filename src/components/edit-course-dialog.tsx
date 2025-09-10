@@ -185,7 +185,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
             <div className="space-y-4">
               <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-end gap-2 p-2 border rounded-lg bg-secondary/30">
+                <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-2 border rounded-lg bg-secondary/30">
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <FormField
                       control={form.control}

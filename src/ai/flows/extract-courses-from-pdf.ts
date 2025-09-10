@@ -15,7 +15,7 @@ const ExtractCoursesFromPdfInputSchema = z.object({
   pdfDataUri: z
     .string()
     .describe(
-      "A PDF file of the course schedule, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:application/pdf;base64,<encoded_data>'."
+      "A PDF file of the course schedule, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:application/pdf;base64,<encoded_data>'"
     ),
 });
 export type ExtractCoursesFromPdfInput = z.infer<
@@ -61,18 +61,19 @@ const extractCoursesPrompt = ai.definePrompt({
   name: 'extractCoursesPrompt',
   input: {schema: ExtractCoursesFromPdfInputSchema},
   output: {schema: ExtractCoursesFromPdfOutputSchema},
-  prompt: `شما یک دستیار هوشمند هستید که برای استخراج اطلاعات درسی از یک فایل PDF جدول زمانی دروس دانشگاه طراحی شده‌اید. زبان شما فارسی است.
+  model: 'googleai/gemini-2.5-flash',
+  prompt: `You are an intelligent assistant designed to extract course information from a university course schedule PDF. Your language is Persian.
 
-  فایل PDF زیر را تحلیل کنید و اطلاعات مربوط به هر درس را استخراج کنید. برای هر درس، موارد زیر را مشخص کنید:
-  - کد درس (مانند CS101)
-  - نام درس (مانند مبانی علوم کامپیوتر)
-  - نام استاد
-  - دسته‌بندی درس به یکی از چهار نوع: "عمومی"، "تخصصی"، "تربیتی"، "فرهنگی"
-  - آرایه‌ای از زمان‌های برگزاری کلاس (مثال: ["شنبه 10:00-12:00", "دوشنبه 10:00-12:00"]). اگر یک درس در دو روز مختلف برگزار می‌شود، هر دو زمان را در آرایه قرار دهید.
-  - آرایه‌ای از مکان‌های برگزاری کلاس (مثال: ["کلاس ۱۰۱", "کلاس ۱۰۲"]). تعداد مکان‌ها باید با تعداد زمان‌ها برابر باشد.
-  - گروه درسی (مثال: "گروه 5"). اگر درسی به گروه خاصی تعلق ندارد (مثلاً دروس عمومی مشترک)، این فیلد را خالی بگذارید.
+  Analyze the following PDF and extract the information for each course. For each course, specify the following:
+  - Course code (e.g., CS101)
+  - Full course name (e.g., Fundamentals of Computer Science)
+  - Instructor's name
+  - Course category, which must be one of: "عمومی" (General), "تخصصی" (Specialized), "تربیتی" (Educational), "فرهنگی" (Cultural)
+  - An array of class times (e.g., ["Saturday 10:00-12:00", "Monday 10:00-12:00"]). If a course is held on two different days, include both times in the array.
+  - An array of class locations (e.g., ["Class 101", "Class 102"]). The number of locations must match the number of times.
+  - Course group (e.g., "Group 5"). If a course does not belong to a specific group (e.g., a common general course), leave this field empty.
 
-  PDF برای پردازش: {{media url=pdfDataUri}}
+  PDF to process: {{media url=pdfDataUri}}
   `,
 });
 

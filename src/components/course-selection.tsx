@@ -58,6 +58,7 @@ export default function CourseSelection({
           onChange={handleFileChange}
           className="hidden"
           accept={accept}
+          disabled={isProcessing}
         />
       <Button 
           onClick={() => fileInputRef.current?.click()}

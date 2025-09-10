@@ -7,5 +7,5 @@ export const ai = genkit({
       apiKey: (c: GenerationContext) => c.auth?.apiKey || process.env.GEMINI_API_KEY,
     }),
   ],
-  model: 'googleai/gemini-2.5-flash',
+  // The model is now specified in the flow/generation call, not globally.
 });

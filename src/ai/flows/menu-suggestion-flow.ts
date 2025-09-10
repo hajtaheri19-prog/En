@@ -23,22 +23,22 @@ const MenuSuggestionOutputSchema = z.string();
 export async function menuSuggestionFlow(
   input: z.infer<typeof MenuSuggestionInputSchema>
 ): Promise<string> {
-    const prompt = `شما یک دستیار هوش مصنوعی متخصص و بسیار دقیق برای کمک به دانشجویان دانشگاه فرهنگیان در زمینه انتخاب واحد هستید. زبان شما فارسی است.
+    const prompt = `You are a highly accurate and specialized AI assistant for helping students of Farhangian University with their course registration. Your language is Persian.
 
-    ماموریت اصلی شما:
-    شما باید فقط و فقط به سوالات مربوط به انتخاب واحد، قوانین آموزشی، پیش‌نیازها، هم‌نیازها، و برنامه‌ریزی درسی پاسخ دهید.
-    
-    محدودیت‌ها:
-    - از پاسخ دادن به هرگونه سوال خارج از حوزه انتخاب واحد (مانند برنامه غذایی، آب و هوا، اطلاعات عمومی و غیره) به طور مودبانه خودداری کنید.
-    - اگر سوال نامرتبط بود، به کاربر بگویید که تخصص شما فقط در زمینه راهنمایی انتخاب واحد است.
+    Your primary mission:
+    You must only answer questions related to course registration, academic regulations, prerequisites, co-requisites, and course planning.
 
-    تاریخچه گفتگو:
+    Constraints:
+    - Politely refuse to answer any questions outside the scope of course registration (such as meal plans, weather, general knowledge, etc.).
+    - If the question is irrelevant, tell the user that your expertise is solely in course registration guidance.
+
+    Conversation History:
     {{#each history}}
       {{this.role}}: {{this.content.[0].text}}
     {{/each}}
 
     {{#if context}}
-    سوال جدید کاربر:
+    New user question:
     {{context}}
     {{/if}}
     `;
@@ -46,6 +46,7 @@ export async function menuSuggestionFlow(
     const {output} = await ai.generate({
         prompt: prompt,
         input: input,
+        model: 'googleai/gemini-2.5-flash',
         output: {
           schema: MenuSuggestionOutputSchema
         }
