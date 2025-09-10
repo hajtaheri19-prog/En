@@ -479,17 +479,19 @@ export default function CourseScheduler() {
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row items-end gap-2">
-                        <div className="flex-1 space-y-2">
-                            <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
-                            <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
-                        </div>
-                        <div className="flex-1 space-y-2">
-                            <Label htmlFor="ts-start" className="text-xs">شروع</Label>
-                            <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
-                        </div>
-                        <div className="flex-1 space-y-2">
-                            <Label htmlFor="ts-end" className="text-xs">پایان</Label>
-                            <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
+                         <div className="w-full flex-1 flex flex-col gap-2">
+                           <div className="flex-1 space-y-2">
+                                <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
+                                <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
+                            </div>
+                             <div className="flex-1 space-y-2">
+                                <Label htmlFor="ts-start" className="text-xs">شروع</Label>
+                                <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                <Label htmlFor="ts-end" className="text-xs">پایان</Label>
+                                <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
+                            </div>
                         </div>
                         <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0 mt-4 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
                     </div>
@@ -516,12 +518,12 @@ export default function CourseScheduler() {
                     <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-end gap-2">
-                        <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row items-end gap-2">
+                        <div className="w-full flex-1">
                             <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
                             <Input id="cg-name" value={newCourseGroup} onChange={e => setNewCourseGroup(e.target.value)} placeholder="مثال: گروه ۱" />
                         </div>
-                        <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                        <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0 mt-4 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
                     </div>
                     {courseGroups.length > 0 && (
                         <ScrollArea className="h-24 mt-4 pr-3">
@@ -751,5 +753,7 @@ export default function CourseScheduler() {
     </>
   );
 }
+
+    
 
     
