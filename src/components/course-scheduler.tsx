@@ -23,7 +23,7 @@ import { Label } from "./ui/label";
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Checkbox } from "./ui/checkbox";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { Alert, AlertTitle } from "./ui/alert";
 import EditCourseDialog from "./edit-course-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
