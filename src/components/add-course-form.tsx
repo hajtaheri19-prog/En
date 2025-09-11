@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 const scheduleSchema = z.object({
   day: z.string().nonempty({ message: "انتخاب روز الزامی است." }),
   timeSlotId: z.string().nonempty({ message: "انتخاب سانس الزامی است." }),
-  location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+  location: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -103,7 +103,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
         const timeSlot = timeSlots.find(ts => ts.id === s.timeSlotId);
         return `${s.day} ${timeSlot?.start}-${timeSlot?.end}`
       }),
-      locations: values.schedule.map(s => s.location),
+      locations: values.schedule.map(s => s.location || 'مشخص نشده'),
       group: values.group || undefined,
     };
     onAddCourse(newCourse);
@@ -260,7 +260,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
                     <FormItem>
                       <FormLabel className="text-xs">مکان کلاس</FormLabel>
                       <FormControl>
-                        <Input placeholder="کلاس 201" {...field} />
+                        <Input placeholder="مکان (اختیاری)" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

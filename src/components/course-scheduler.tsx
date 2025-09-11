@@ -266,8 +266,7 @@ export default function CourseScheduler() {
                 const parts = String(row.code_group).split('_');
                 if (parts.length > 1) {
                     code = parts[0];
-                    // Group is the last part
-                    group = parts[parts.length - 1];
+                    group = parts[parts.length - 1].slice(-2);
                 } else {
                     code = parts[0];
                 }
@@ -285,8 +284,7 @@ export default function CourseScheduler() {
                 timeslots = scheduleLines
                     .filter(line => line.includes('درس'))
                     .map(line => {
-                        // Example: "درس(ت): چهارشنبه 09:30-11:30"
-                        const parts = line.split(/[\s\:]+/); // Split by space or colon
+                        const parts = line.split(/[\s\:]+/);
                         if (parts.length < 2) return '';
                         const day = parts.find(p => daysOfWeek.includes(p));
                         const time = parts.find(p => p.includes('-'));
@@ -533,8 +531,6 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-6">
-        
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="api-settings" className="border-b-0">
             <Card className="shadow-lg">
@@ -579,14 +575,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
           </AccordionItem>
         </Accordion>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="shadow-lg">
+        <div className="flex flex-col md:flex-row gap-6">
+            <Card className="shadow-lg w-full md:w-1/2">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                     <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row items-end gap-2">
+                    <div className="flex items-end gap-2">
                          <div className="w-full flex-1 flex flex-col sm:flex-row gap-2">
                            <div className="flex-1 space-y-2">
                                 <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
@@ -601,7 +597,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                 <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
                             </div>
                         </div>
-                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0 w-full sm:w-10 mt-2 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
+                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
                     </div>
                     {timeSlots.length > 0 && (
                         <ScrollArea className="h-24 mt-4 pr-3">
@@ -620,7 +616,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </CardContent>
             </Card>
 
-            <Card className="shadow-lg">
+            <Card className="shadow-lg w-full md:w-1/2">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
                     <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
@@ -667,7 +663,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                  <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند. لطفاً کلید API خود را در تنظیمات وارد کنید." />
               </TabsContent>
                <TabsContent value="excel" className="pt-4">
-                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل: code, name, instructorName, category, timeslots, locations, group (اختیاری) باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
+                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
               </TabsContent>
                <TabsContent value="manual" className="pt-4">
                 <AddCourseForm 
@@ -831,8 +827,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </>
             )}
         </Button>
-      </div>
-
+      
       <div className="w-full">
         <Tabs defaultValue="system-schedule">
           <TabsList className="flex h-auto flex-col sm:flex-row">

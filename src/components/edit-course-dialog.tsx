@@ -15,7 +15,7 @@ import { useEffect } from "react";
 const scheduleSchema = z.object({
   day: z.string().nonempty({ message: "انتخاب روز الزامی است." }),
   timeSlotId: z.string().nonempty({ message: "انتخاب سانس الزامی است." }),
-  location: z.string().min(1, { message: "مکان کلاس الزامی است." }),
+  location: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -49,7 +49,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
         const timeRange = timeslot.substring(dayMatch.length).trim();
         const timeSlotMatch = timeSlots.find(ts => `${ts.start}-${ts.end}` === timeRange);
 
-        return { day: dayMatch, timeSlotId: timeSlotMatch?.id || "", location };
+        return { day: dayMatch, timeSlotId: timeSlotMatch?.id || "", location: location === 'مشخص نشده' ? '' : location };
     };
 
     const form = useForm<EditCourseFormValues>({
@@ -94,7 +94,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
                 const timeSlot = timeSlots.find(ts => ts.id === s.timeSlotId);
                 return `${s.day} ${timeSlot?.start}-${timeSlot?.end}`;
             }),
-            locations: values.schedule.map(s => s.location),
+            locations: values.schedule.map(s => s.location || 'مشخص نشده'),
             group: values.group || undefined,
         };
         onUpdateCourse(updatedCourse);
@@ -225,7 +225,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">مکان کلاس</FormLabel>
-                          <FormControl><Input placeholder="کلاس 201" {...field} /></FormControl>
+                          <FormControl><Input placeholder="مکان (اختیاری)" {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
