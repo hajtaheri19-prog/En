@@ -59,7 +59,7 @@ interface Conflict {
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots, isAiGenerated = false }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
-  const [showSecondarySlots, setShowSecondarySlots] = useState(true);
+  const [showSecondarySlots, setShowSecondarySlots] = useState(false);
   
   const isManualMode = manualCourses !== undefined;
 
@@ -407,7 +407,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 ref={scheduleRef} 
                 className="grid gap-px bg-background p-1 min-w-[900px] border"
                 style={{
-                  gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, minmax(120px, 1fr))`,
+                  gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, minmax(80px, 1fr))`,
                   gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
                   direction: 'rtl'
                 }}

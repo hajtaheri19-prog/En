@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle, BrainCircuit } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle, BrainCircuit, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -55,6 +55,16 @@ export default function CourseScheduler() {
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
+  // View settings state
+  const [viewSettings, setViewSettings] = useState({
+    api: true,
+    timeSlots: true,
+    courseGroups: true,
+    addCourses: true,
+    courseList: true,
+    preferences: true,
+  });
+
   useEffect(() => {
     try {
       const storedProvider = localStorage.getItem('api-provider') || 'gemini';
@@ -76,6 +86,10 @@ export default function CourseScheduler() {
       if(storedCourseGroups) {
           setCourseGroups(JSON.parse(storedCourseGroups));
       }
+      const storedViewSettings = localStorage.getItem('view-settings');
+      if (storedViewSettings) {
+        setViewSettings(JSON.parse(storedViewSettings));
+      }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
         toast({ title: "خطا در بارگذاری اطلاعات", description: "اطلاعات ذخیره شده در مرورگر قابل خواندن نیست.", variant: "destructive"})
@@ -93,6 +107,11 @@ export default function CourseScheduler() {
     if (isLoading) return;
     localStorage.setItem('course-groups', JSON.stringify(courseGroups));
   }, [courseGroups, isLoading])
+
+   useEffect(() => {
+    if (isLoading) return;
+    localStorage.setItem('view-settings', JSON.stringify(viewSettings));
+  }, [viewSettings, isLoading]);
 
   const handleApiProviderChange = (provider: string) => {
     setApiProvider(provider);
@@ -277,18 +296,19 @@ export default function CourseScheduler() {
 
            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr || typeof timeslotStr !== 'string') return [];
-                const daysRegex = /(یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|شنبه)/;
+                
+                const daysRegex = /(یکشنبه|یک شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
-
+            
                 const lines = timeslotStr.split('\n').filter(line => line.trim().startsWith('درس'));
                 const results: string[] = [];
-
+            
                 lines.forEach(line => {
                     const dayMatch = line.match(daysRegex);
                     const timeMatch = line.match(timeRegex);
-
+            
                     if (dayMatch && timeMatch) {
-                       const day = dayMatch[0];
+                       const day = dayMatch[0].replace(' ', ''); // Normalize "یک شنبه" to "یکشنبه"
                        const timeRange = timeMatch[0];
                        results.push(`${day} ${timeRange}`);
                        allTimeRanges.add(timeRange);
@@ -570,6 +590,10 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
   const handleRemoveCourseGroup = (id: string) => {
       setCourseGroups(prev => prev.filter(cg => cg.id !== id));
   }
+
+  const handleViewSettingChange = (key: keyof typeof viewSettings, value: boolean) => {
+    setViewSettings(prev => ({...prev, [key]: value}));
+  }
   
   if (isLoading) {
     return (
@@ -585,6 +609,48 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
     <>
         <div className="space-y-6">
             <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="view-settings" className="border-b-0">
+                    <Card className="shadow-md">
+                        <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
+                            <CardHeader className="p-0 text-right">
+                                <CardTitle className="flex items-center gap-2"><SlidersHorizontal /> تنظیمات نمایش</CardTitle>
+                                <CardDescription className="text-right">بخش‌های مختلف برنامه را نمایش داده یا مخفی کنید.</CardDescription>
+                            </CardHeader>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           <CardContent className="p-4 pt-6 sm:p-6">
+                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                                    {Object.entries({
+                                        api: 'تنظیمات API',
+                                        timeSlots: 'مدیریت سانس‌ها',
+                                        courseGroups: 'مدیریت گروه‌ها',
+                                        addCourses: 'افزودن دروس',
+                                        courseList: 'لیست دروس',
+                                        preferences: 'اولویت‌های شما',
+                                    }).map(([key, label]) => (
+                                         <div key={key} className="flex items-center space-x-2 space-x-reverse">
+                                            <Checkbox
+                                                id={`view-${key}`}
+                                                checked={viewSettings[key as keyof typeof viewSettings]}
+                                                onCheckedChange={(checked) => handleViewSettingChange(key as keyof typeof viewSettings, !!checked)}
+                                            />
+                                            <label
+                                                htmlFor={`view-${key}`}
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            >
+                                                {label}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                           </CardContent>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+            </Accordion>
+
+
+            {viewSettings.api && <Accordion type="single" collapsible className="w-full" defaultValue="api-settings">
             <AccordionItem value="api-settings" className="border-b-0">
                 <Card className="shadow-md">
                     <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
@@ -626,10 +692,10 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </AccordionContent>
                 </Card>
             </AccordionItem>
-            </Accordion>
+            </Accordion>}
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <Card className="shadow-md">
+                {viewSettings.timeSlots && <Card className="shadow-md">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                         <CardDescription>بازه‌های زمانی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
@@ -667,9 +733,9 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                             </ScrollArea>
                         )}
                     </CardContent>
-                </Card>
+                </Card>}
 
-                <Card className="shadow-md">
+                {viewSettings.courseGroups && <Card className="shadow-md">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
                         <CardDescription>گروه‌های درسی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
@@ -697,10 +763,10 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                             </ScrollArea>
                         )}
                     </CardContent>
-                </Card>
+                </Card>}
             </div>
             
-            <Card className="shadow-md">
+            {viewSettings.addCourses && <Card className="shadow-md">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
                 <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
@@ -729,9 +795,9 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </TabsContent>
                 </Tabs>
             </CardContent>
-            </Card>
+            </Card>}
 
-            <Card className="shadow-md">
+            {viewSettings.courseList && <Card className="shadow-md">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
                 <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -758,7 +824,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-                <ScrollArea className="h-[300px] pr-3">
+                <ScrollArea className="h-[400px] pr-3">
                     {availableCourses.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center p-4 text-center text-muted-foreground">
                             <FileUp className="h-10 w-10 mb-4" />
@@ -842,9 +908,9 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     </AlertDialog>
                 )}
             </CardContent>
-            </Card>
+            </Card>}
             
-            <Accordion type="single" collapsible className="w-full">
+            {viewSettings.preferences && <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="preferences" className="border-b-0">
                 <Card className="shadow-md">
                 <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
@@ -865,7 +931,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </AccordionContent>
                 </Card>
             </AccordionItem>
-            </Accordion>
+            </Accordion>}
 
 
             <Button size="lg" className="w-full shadow-lg" onClick={handleGenerateSchedule} disabled={isProcessing || availableCourses.length === 0}>
