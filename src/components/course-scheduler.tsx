@@ -254,6 +254,8 @@ export default function CourseScheduler() {
             return newRow;
         });
 
+        const allTimeRanges = new Set<string>();
+
         const parsedCourses: Omit<Course, "id">[] = mappedData.map((row: any) => {
             if (!row.code_group || !row.name) {
                 return null;
@@ -271,6 +273,7 @@ export default function CourseScheduler() {
                 const results: string[] = [];
                 while((matches = regex.exec(timeslotStr)) !== null) {
                     results.push(`${matches[1]} ${matches[2]}-${matches[3]}`);
+                    allTimeRanges.add(`${matches[2]}-${matches[3]}`);
                 }
                 return results;
             }
@@ -285,8 +288,9 @@ export default function CourseScheduler() {
             const instructorName = row.instructorName || "نامشخص";
             const instructorId = String(instructorName).replace(/\s+/g, '-').toLowerCase();
 
-            // Default location for all timeslots
-            const locations = Array(timeslots.length).fill(row.location || 'مشخص نشده');
+            // Handle multiple locations separated by ;
+            const locationsRaw = row.location ? String(row.location).split(';') : [];
+            const locations = timeslots.map((_, index) => locationsRaw[index] || locationsRaw[0] || 'مشخص نشده');
 
             return {
                 code: code,
@@ -311,9 +315,32 @@ export default function CourseScheduler() {
         );
 
         setAvailableCourses(prev => [...prev, ...newCourses]);
+        
+        // Auto-generate and update time slots
+        setTimeSlots(prevTimeSlots => {
+            const existingTimeRanges = new Set(prevTimeSlots.map(ts => `${ts.start}-${ts.end}`));
+            const newTimeSlotsToAdd: TimeSlot[] = [];
+            let timeSlotCounter = prevTimeSlots.length + 1;
+
+            allTimeRanges.forEach(range => {
+                if (!existingTimeRanges.has(range)) {
+                    const [start, end] = range.split('-');
+                    newTimeSlotsToAdd.push({
+                        id: `ts-${Date.now()}-${Math.random()}`,
+                        name: `سانس ${timeSlotCounter++}`,
+                        start,
+                        end,
+                    });
+                    existingTimeRanges.add(range); // Prevent adding duplicates from the same file
+                }
+            });
+
+            return [...prevTimeSlots, ...newTimeSlotsToAdd];
+        });
+
         toast({
             title: "استخراج موفق",
-            description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد.`,
+            description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد و ${allTimeRanges.size} سانس زمانی به صورت خودکار مدیریت شد.`,
         });
     } catch (error: any) {
         console.error("خطا در پردازش اکسل:", error);
@@ -560,7 +587,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 <Card className="shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
-                        <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
+                        <CardDescription>بازه‌های زمانی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row items-end gap-2">
@@ -572,7 +599,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                 <Label htmlFor="ts-start" className="text-xs">شروع</Label>
                                 <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
                             </div>
-                            <div className="w-full flex-1 flex flex-col gap-2">
+                             <div className="w-full flex-1 flex flex-col gap-2">
                                 <Label htmlFor="ts-end" className="text-xs">پایان</Label>
                                 <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
                             </div>
@@ -632,7 +659,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-                <Tabs defaultValue="manual">
+                <Tabs defaultValue="excel">
                 <TabsList className="flex flex-col sm:flex-row h-auto">
                     <TabsTrigger value="pdf" disabled={isProcessing || !apiKey} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
                     <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
@@ -642,7 +669,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند. لطفاً کلید API خود را در تنظیمات وارد کنید." />
                 </TabsContent>
                 <TabsContent value="excel" className="pt-4">
-                    <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
+                    <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند." />
                 </TabsContent>
                 <TabsContent value="manual" className="pt-4">
                     <AddCourseForm 
