@@ -320,7 +320,7 @@ export default function CourseScheduler() {
                 const daysRegex = /(یک ?شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
             
-                const lines = timeslotStr.split('\n').filter(line => line.trim().startsWith('درس'));
+                const lines = timeslotStr.split('\n');
                 const results: string[] = [];
             
                 lines.forEach(line => {
@@ -1013,3 +1013,5 @@ export default function CourseScheduler() {
     </>
   );
 }
+
+    
