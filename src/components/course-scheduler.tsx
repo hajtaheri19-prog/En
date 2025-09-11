@@ -265,21 +265,26 @@ export default function CourseScheduler() {
             const codeGroup = String(row.code_group);
             const parts = codeGroup.split('_');
             const code = parts[0];
-            const group = parts.length > 1 ? parts[1].slice(-2) : undefined;
-            if (group) {
-                allGroups.add(group);
+            let group: string | undefined = undefined;
+            if (parts.length > 1) {
+                const groupPart = parts[parts.length - 1];
+                if (groupPart && groupPart.length >= 2) {
+                     group = groupPart.slice(-2);
+                     allGroups.add(group);
+                }
             }
 
-            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
-                if (!timeslotStr) return [];
-                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه)\b/g;
+
+           const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
+                if (!timeslotStr || typeof timeslotStr !== 'string') return [];
+                const daysRegex = /(شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه)/;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
                 const lines = timeslotStr.split('\n');
                 const results: string[] = [];
 
                 lines.forEach(line => {
                     if (line.trim().startsWith('درس')) {
-                       const dayMatch = line.match(dayRegex);
+                       const dayMatch = line.match(daysRegex);
                        const timeMatch = line.match(timeRegex);
 
                        if (dayMatch && timeMatch) {
@@ -316,6 +321,15 @@ export default function CourseScheduler() {
                 group: group,
             };
         }).filter((c): c is Omit<Course, "id"> => c !== null);
+
+        if (parsedCourses.length === 0) {
+            toast({
+                title: "درسی استخراج نشد",
+                description: "هیچ درس معتبری در فایل اکسل پیدا نشد. لطفاً ساختار فایل و ستون‌ها را بررسی کنید.",
+                variant: "destructive",
+            });
+            return;
+        }
 
         const coursesWithIds = parsedCourses.map(course => ({
             ...course,
@@ -574,14 +588,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="api-settings" className="border-b-0">
                 <Card className="shadow-md">
-                    <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
+                    <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
                         <CardHeader className="p-0 text-right">
                             <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
                             <CardDescription className="text-right">برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
                         </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
-                    <CardContent className="pt-6 p-4 sm:p-6">
+                    <CardContent className="p-4 pt-6 sm:p-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
@@ -597,7 +611,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                             </div>
                             <div className="space-y-2">
                             <Label htmlFor="api-key">کلید API</Label>
-                            <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex flex-col gap-2 sm:flex-row">
                                 <Input
                                 id="api-key"
                                 type="password"
@@ -605,7 +619,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                 value={apiKey}
                                 onChange={handleApiKeyChange}
                                 />
-                                <Button onClick={handleSaveApiKey} className="w-full sm:w-auto shrink-0"><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                                <Button onClick={handleSaveApiKey} className="w-full shrink-0 sm:w-auto"><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
                             </div>
                             </div>
                         </div>
@@ -615,27 +629,29 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             </AccordionItem>
             </Accordion>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <Card className="shadow-md">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                         <CardDescription>بازه‌های زمانی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row items-end gap-2">
-                            <div className="w-full flex-1 flex flex-col gap-2">
-                                <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
-                                <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
+                        <div className="flex flex-col items-end gap-2 sm:flex-row">
+                             <div className="grid w-full grid-cols-1 flex-1 gap-2 sm:grid-cols-3">
+                                <div className="flex w-full flex-1 flex-col gap-2">
+                                    <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
+                                    <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
+                                </div>
+                                <div className="flex w-full flex-1 flex-col gap-2">
+                                    <Label htmlFor="ts-start" className="text-xs">شروع</Label>
+                                    <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
+                                </div>
+                                 <div className="flex w-full flex-1 flex-col gap-2">
+                                    <Label htmlFor="ts-end" className="text-xs">پایان</Label>
+                                    <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
+                                </div>
                             </div>
-                            <div className="w-full flex-1 flex flex-col gap-2">
-                                <Label htmlFor="ts-start" className="text-xs">شروع</Label>
-                                <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
-                            </div>
-                             <div className="w-full flex-1 flex flex-col gap-2">
-                                <Label htmlFor="ts-end" className="text-xs">پایان</Label>
-                                <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
-                            </div>
-                            <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0 mt-2 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
+                            <Button onClick={handleAddNewTimeSlot} size="icon" className="w-full shrink-0 sm:w-10"><PlusCircle className="h-4 w-4"/></Button>
                         </div>
                         {timeSlots.length > 0 && (
                             <ScrollArea className="h-24 mt-4 pr-3">
@@ -660,12 +676,12 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                         <CardDescription>گروه‌های درسی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
-                        <div className="flex items-end gap-2">
+                        <div className="flex flex-col items-end gap-2 sm:flex-row">
                             <div className="w-full flex-1">
                                 <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
                                 <Input id="cg-name" value={newCourseGroup} onChange={e => setNewCourseGroup(e.target.value)} placeholder="مثال: گروه ۱" />
                             </div>
-                            <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                            <Button onClick={handleAddNewCourseGroup} size="icon" className="w-full shrink-0 sm:w-10"><PlusCircle className="h-4 w-4"/></Button>
                         </div>
                         {courseGroups.length > 0 && (
                             <ScrollArea className="h-24 mt-4 pr-3">
@@ -692,7 +708,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
                 <Tabs defaultValue="excel">
-                <TabsList className="grid grid-cols-1 sm:grid-cols-3 h-auto">
+                <TabsList className="grid h-auto grid-cols-1 sm:grid-cols-3">
                     <TabsTrigger value="pdf" disabled={isProcessing || !apiKey}><FileUp className="ml-2" /> PDF</TabsTrigger>
                     <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل</TabsTrigger>
                     <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
@@ -719,11 +735,11 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             <Card className="shadow-md">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <CardDescription className="mt-1">
                         {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                     </CardDescription>
-                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                    <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:flex-row">
                         <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0} className="w-full">
                             <Save className="ml-1 h-4 w-4" />
                             ذخیره
@@ -745,9 +761,9 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             <CardContent className="p-4 sm:p-6">
                 <ScrollArea className="h-[300px] pr-3">
                     {availableCourses.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                        <div className="flex h-full flex-col items-center justify-center p-4 text-center text-muted-foreground">
                             <FileUp className="h-10 w-10 mb-4" />
-                            <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
+                            <h3 className="mb-1 font-semibold">هنوز درسی اضافه نشده</h3>
                             <p className="text-sm">برای شروع، یک فایل اکسل یا به صورت دستی درس اضافه کنید.</p>
                         </div>
                     ) : (
@@ -757,8 +773,8 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                     <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
                                     <div className="space-y-2">
                                         {courses.map(course => (
-                                            <div key={course.id} className="flex items-start justify-between p-3 rounded-lg border bg-secondary/50">
-                                                <div className="flex items-start gap-3 flex-1 overflow-hidden">
+                                            <div key={course.id} className="flex items-start justify-between rounded-lg border bg-secondary/50 p-3">
+                                                <div className="flex flex-1 items-start gap-3 overflow-hidden">
                                                     <Checkbox 
                                                     id={`manual-select-${course.id}`}
                                                     checked={manuallySelectedCourseIds.has(course.id)}
@@ -767,18 +783,18 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                                     className="mt-1"
                                                     />
                                                     <div className="flex-1 overflow-hidden">
-                                                        <p className="font-medium text-sm truncate">{course.name} ({course.code})</p>
-                                                        <p className="text-xs text-muted-foreground truncate">زمان: {course.timeslots.join('، ')}</p>
-                                                        <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
+                                                        <p className="truncate text-sm font-medium">{course.name} ({course.code})</p>
+                                                        <p className="truncate text-xs text-muted-foreground">زمان: {course.timeslots.join('، ')}</p>
+                                                        <p className="truncate text-xs text-muted-foreground">مکان: {course.locations.join('، ')}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center flex-shrink-0 -mr-2">
-                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
+                                                <div className="-mr-2 flex flex-shrink-0 items-center">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setEditingCourse(course)}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
                                                     <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </AlertDialogTrigger>
@@ -832,14 +848,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="preferences" className="border-b-0">
                 <Card className="shadow-md">
-                <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
+                <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
                     <CardHeader className="p-0 text-right">
                         <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
                         <CardDescription className="text-right">به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                     </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
-                    <CardContent className="pt-6 p-4 sm:p-6">
+                    <CardContent className="p-4 pt-6 sm:p-6">
                         <StudentPreferencesForm
                             preferences={studentPreferences}
                             onPreferencesChange={setStudentPreferences}
@@ -869,7 +885,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
         
             <div className="w-full">
                 <Tabs defaultValue="system-schedule">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+                <TabsList className="grid h-auto w-full grid-cols-1 sm:grid-cols-3">
                     <TabsTrigger value="system-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
                     <TabsTrigger value="ai-schedule" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
                     <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
