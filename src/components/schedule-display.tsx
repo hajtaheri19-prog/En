@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
-import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon, BrainCircuit } from "lucide-react";
+import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon, BrainCircuit, Filter } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo, useState } from "react";
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Papa from 'papaparse';
@@ -19,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Switch } from "./ui/switch";
+import { Label } from "./ui/label";
 
 const toPersianDigits = (num: string) => {
     if (!num) return "";
@@ -35,6 +37,7 @@ interface ScheduleDisplayProps {
 }
 
 const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
+const mainTimeRanges = new Set(["07:30-09:30", "09:30-11:30", "13:30-15:30", "15:30-17:30", "17:30-19:30"]);
 
 const timeToMinutes = (time: string): number => {
     try {
@@ -56,13 +59,18 @@ interface Conflict {
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots, isAiGenerated = false }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
+  const [showSecondarySlots, setShowSecondarySlots] = useState(true);
   
   const isManualMode = manualCourses !== undefined;
 
   const sortedTimeSlots = useMemo(() => {
     if (!timeSlots) return [];
-    return [...timeSlots].sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-  }, [timeSlots]);
+    const filtered = showSecondarySlots 
+      ? timeSlots 
+      : timeSlots.filter(ts => mainTimeRanges.has(`${ts.start}-${ts.end}`));
+
+    return [...filtered].sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+  }, [timeSlots, showSecondarySlots]);
   
  const getGridPosition = useCallback((timeslot: string) => {
     try {
@@ -354,6 +362,15 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {description}
             </CardDescription>
         </div>
+        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch 
+                id="show-secondary-slots" 
+                checked={showSecondarySlots}
+                onCheckedChange={setShowSecondarySlots}
+              />
+              <Label htmlFor="show-secondary-slots" className="text-sm">نمایش سانس‌های فرعی</Label>
+            </div>
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -378,6 +395,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+        </div>
       </CardHeader>
       <CardContent className="p-2 sm:p-6">
         {isLoading ? (

@@ -255,6 +255,7 @@ export default function CourseScheduler() {
         });
 
         const allTimeRanges = new Set<string>();
+        const allGroups = new Set<string>();
 
         const parsedCourses: Omit<Course, "id">[] = mappedData.map((row: any) => {
             if (!row.code_group || !row.name) {
@@ -262,26 +263,33 @@ export default function CourseScheduler() {
             }
 
             const codeGroup = String(row.code_group);
-            const [code, group] = codeGroup.includes('_') 
-                ? [codeGroup.split('_')[0], codeGroup.split('_')[1].slice(-2)]
-                : [codeGroup, undefined];
+            const parts = codeGroup.split('_');
+            const code = parts[0];
+            const group = parts.length > 1 ? parts[1].slice(-2) : undefined;
+            if (group) {
+                allGroups.add(group);
+            }
 
             const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr) return [];
-                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)/g;
+                // Regex to match day names exactly and avoid partial matches (e.g. "شنبه" in "پنجشنبه")
+                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)\b/g;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
                 const lines = timeslotStr.split('\n');
                 const results: string[] = [];
 
                 lines.forEach(line => {
-                    const dayMatch = line.match(dayRegex);
-                    const timeMatch = line.match(timeRegex);
+                    // Match only lines starting with "درس"
+                    if (line.trim().startsWith('درس')) {
+                       const dayMatch = line.match(dayRegex);
+                       const timeMatch = line.match(timeRegex);
 
-                    if (dayMatch && timeMatch) {
-                        const day = dayMatch[0];
-                        const timeRange = timeMatch[0];
-                        results.push(`${day} ${timeRange}`);
-                        allTimeRanges.add(timeRange);
+                       if (dayMatch && timeMatch) {
+                           const day = dayMatch[0];
+                           const timeRange = timeMatch[0];
+                           results.push(`${day} ${timeRange}`);
+                           allTimeRanges.add(timeRange);
+                       }
                     }
                 });
                 return results;
@@ -347,9 +355,25 @@ export default function CourseScheduler() {
             return [...prevTimeSlots, ...newTimeSlotsToAdd];
         });
 
+        // Auto-add course groups
+        setCourseGroups(prevGroups => {
+          const existingGroupNames = new Set(prevGroups.map(g => g.name));
+          const newGroupsToAdd: CourseGroup[] = [];
+          allGroups.forEach(groupName => {
+              if (!existingGroupNames.has(`گروه ${groupName}`)) {
+                  newGroupsToAdd.push({
+                      id: `cg-${Date.now()}-${Math.random()}`,
+                      name: `گروه ${groupName}`
+                  });
+                  existingGroupNames.add(`گروه ${groupName}`);
+              }
+          });
+          return [...prevGroups, ...newGroupsToAdd];
+        });
+
         toast({
             title: "استخراج موفق",
-            description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد و ${allTimeRanges.size} سانس زمانی به صورت خودکار مدیریت شد.`,
+            description: `${newCourses.length} درس جدید استخراج شد. سانس‌ها و گروه‌ها به صورت خودکار مدیریت شدند.`,
         });
     } catch (error: any) {
         console.error("خطا در پردازش اکسل:", error);
