@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
