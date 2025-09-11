@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractCoursesFromPdf } from "@/ai/flows/extract-courses-from-pdf";
 import { AddCourseForm } from "./add-course-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle, BrainCircuit, SlidersHorizontal } from "lucide-react";
+import { FileUp, ListPlus, WandSparkles, Trash2, Group, Settings, KeyRound, Sheet, Save, FolderOpen, Calendar, Edit, Info, AlertTriangle, Clock, PlusCircle, BrainCircuit, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -27,12 +27,21 @@ import { Alert, AlertTitle } from "./ui/alert";
 import EditCourseDialog from "./edit-course-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Skeleton } from "./ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 const toPersianDigits = (num: string) => {
     if (!num) return "";
     const persianDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
     return num.toString().replace(/\d/g, (x) => persianDigits[parseInt(x)]);
 };
+
+type ListHeight = 'sm' | 'md' | 'lg';
+const listHeightMap: Record<ListHeight, string> = {
+    sm: '200px',
+    md: '400px',
+    lg: '600px',
+};
+
 
 export default function CourseScheduler() {
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +63,7 @@ export default function CourseScheduler() {
   const { toast } = useToast();
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [courseListHeight, setCourseListHeight] = useState<ListHeight>('md');
 
   // View settings state
   const [viewSettings, setViewSettings] = useState({
@@ -90,6 +100,10 @@ export default function CourseScheduler() {
       if (storedViewSettings) {
         setViewSettings(JSON.parse(storedViewSettings));
       }
+       const storedListHeight = localStorage.getItem('course-list-height') as ListHeight;
+       if (storedListHeight && ['sm', 'md', 'lg'].includes(storedListHeight)) {
+        setCourseListHeight(storedListHeight);
+      }
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
         toast({ title: "خطا در بارگذاری اطلاعات", description: "اطلاعات ذخیره شده در مرورگر قابل خواندن نیست.", variant: "destructive"})
@@ -112,6 +126,12 @@ export default function CourseScheduler() {
     if (isLoading) return;
     localStorage.setItem('view-settings', JSON.stringify(viewSettings));
   }, [viewSettings, isLoading]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    localStorage.setItem('course-list-height', courseListHeight);
+  }, [courseListHeight, isLoading]);
+
 
   const handleApiProviderChange = (provider: string) => {
     setApiProvider(provider);
@@ -297,7 +317,7 @@ export default function CourseScheduler() {
            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr || typeof timeslotStr !== 'string') return [];
                 
-                const daysRegex = /(یکشنبه|یک شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
+                const daysRegex = /(یک ?شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
             
                 const lines = timeslotStr.split('\n').filter(line => line.trim().startsWith('درس'));
@@ -414,7 +434,7 @@ export default function CourseScheduler() {
         });
     }
 }
-const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
+
   const handleFileUpload = (file: File) => {
       startProcessingTransition(() => {
           const reader = new FileReader();
@@ -804,7 +824,21 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     <CardDescription className="mt-1">
                         {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                     </CardDescription>
-                    <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:flex-row">
+                    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+                       <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-full justify-between">
+                                <span>ارتفاع: {{'sm': 'کوچک', 'md': 'متوسط', 'lg': 'بزرگ'}[courseListHeight]}</span>
+                                <ChevronDown className="mr-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setCourseListHeight('sm')}>کوچک</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCourseListHeight('md')}>متوسط</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setCourseListHeight('lg')}>بزرگ</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0} className="w-full">
                             <Save className="ml-1 h-4 w-4" />
                             ذخیره
@@ -824,7 +858,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </div>
             </CardHeader>
             <CardContent className="p-6">
-                <ScrollArea className="h-[400px] pr-3">
+                <ScrollArea className="pr-3 transition-all duration-300" style={{ height: listHeightMap[courseListHeight] }}>
                     {availableCourses.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center p-4 text-center text-muted-foreground">
                             <FileUp className="h-10 w-10 mb-4" />

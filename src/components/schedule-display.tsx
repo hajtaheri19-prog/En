@@ -36,7 +36,7 @@ interface ScheduleDisplayProps {
   isAiGenerated?: boolean;
 }
 
-const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
+const allDays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 const mainTimeRanges = new Set(["07:30-09:30", "09:30-11:30", "13:30-15:30", "15:30-17:30", "17:30-19:30"]);
 
 const timeToMinutes = (time: string): number => {
@@ -60,8 +60,11 @@ interface Conflict {
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots, isAiGenerated = false }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
   const [showSecondarySlots, setShowSecondarySlots] = useState(false);
+  const [showThursday, setShowThursday] = useState(false);
   
   const isManualMode = manualCourses !== undefined;
+
+  const days = useMemo(() => allDays.filter(day => showThursday || day !== "پنجشنبه"), [showThursday]);
 
   const sortedTimeSlots = useMemo(() => {
     if (!timeSlots) return [];
@@ -132,7 +135,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         console.error("Error parsing timeslot:", timeslot, e);
         return null;
     }
-}, [sortedTimeSlots]);
+}, [sortedTimeSlots, days]);
 
 
 
@@ -371,6 +374,14 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 disabled={timeSlots.length === 0}
               />
               <Label htmlFor="show-secondary-slots" className="text-sm shrink-0">نمایش سانس‌های فرعی</Label>
+            </div>
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Switch 
+                id="show-thursday" 
+                checked={showThursday}
+                onCheckedChange={setShowThursday}
+              />
+              <Label htmlFor="show-thursday" className="text-sm shrink-0">نمایش پنج‌شنبه</Label>
             </div>
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
             <DropdownMenu>
