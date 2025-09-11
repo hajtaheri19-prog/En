@@ -269,31 +269,30 @@ export default function CourseScheduler() {
             if (parts.length > 1) {
                 const groupPart = parts[parts.length - 1];
                 if (groupPart && groupPart.length >= 2) {
-                     group = groupPart.slice(-2);
-                     allGroups.add(group);
+                     const groupName = groupPart.slice(-2);
+                     group = groupName;
+                     allGroups.add(groupName);
                 }
             }
 
-
            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr || typeof timeslotStr !== 'string') return [];
-                const daysRegex = /(شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه)/;
+                const daysRegex = /(یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|شنبه)/;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
-                const lines = timeslotStr.split('\n');
+
+                const lines = timeslotStr.split('\n').filter(line => line.trim().startsWith('درس'));
                 const results: string[] = [];
 
                 lines.forEach(line => {
-                    if (line.trim().startsWith('درس')) {
-                       const dayMatch = line.match(daysRegex);
-                       const timeMatch = line.match(timeRegex);
+                    const dayMatch = line.match(daysRegex);
+                    const timeMatch = line.match(timeRegex);
 
-                       if (dayMatch && timeMatch) {
-                           const day = dayMatch[0];
-                           const timeRange = timeMatch[0];
-                           results.push(`${day} ${timeRange}`);
-                           allTimeRanges.add(timeRange);
-                       }
-                    }
+                    if (dayMatch && timeMatch) {
+                       const day = dayMatch[0];
+                       const timeRange = timeMatch[0];
+                       results.push(`${day} ${timeRange}`);
+                       allTimeRanges.add(timeRange);
+                   }
                 });
                 return results;
             }
