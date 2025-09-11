@@ -316,9 +316,9 @@ export default function CourseScheduler() {
 
            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr || typeof timeslotStr !== 'string') return [];
-                
+            
                 const daysRegex = /(یک ?شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
-                const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
+                const timeRegex = /(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/;
             
                 const lines = timeslotStr.split('\n');
                 const results: string[] = [];
