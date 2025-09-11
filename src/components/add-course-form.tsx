@@ -61,6 +61,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
       instructorName: "",
       schedule: [{ day: "", timeSlotId: "", location: "" }],
       group: "",
+      category: "تخصصی",
     },
   });
 
@@ -175,7 +176,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
             render={({ field }) => (
               <FormItem>
                 <FormLabel>دسته‌بندی</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
+                <Select onValueChange={field.onChange} value={field.value} dir="rtl">
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="انتخاب دسته‌بندی (اختیاری)" />
@@ -198,7 +199,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
             render={({ field }) => (
               <FormItem>
                 <FormLabel>گروه</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl" disabled={courseGroups.length === 0}>
+                <Select onValueChange={field.onChange} value={field.value} dir="rtl" disabled={courseGroups.length === 0}>
                    <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={courseGroups.length === 0 ? "اول گروه تعریف کنید" : "انتخاب گروه (اختیاری)"} />
@@ -217,8 +218,8 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
         <div className="space-y-4">
           <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
           {fields.map((field, index) => (
-            <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-2 border rounded-lg bg-secondary/30">
-               <div className="w-full flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-3 border rounded-lg bg-secondary/30">
+               <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
                  <FormField
                   control={form.control}
                   name={`schedule.${index}.day`}
@@ -265,11 +266,13 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
                   )}
                 />
                </div>
-               {fields.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0 mt-2 sm:mt-0">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                )}
+                <div className="flex w-full sm:w-auto mt-2 sm:mt-0">
+                   {fields.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                </div>
             </div>
           ))}
           <Button type="button" variant="outline" size="sm" onClick={() => append({ day: "", timeSlotId: "", location: "" })}>

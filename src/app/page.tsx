@@ -37,14 +37,16 @@ export default function Home() {
                       <Bot />
                     </Button>
                   </SidebarTrigger>
-                  <BookHeart className="h-6 w-6 text-primary hidden sm:flex" />
-                   <h1 className="font-headline text-lg sm:text-xl md:text-2xl font-bold tracking-tighter">
-                    انتخاب واحد هوشمند KPU
-                  </h1>
+                  <div className="flex items-center gap-2">
+                     <BookHeart className="h-6 w-6 text-primary hidden sm:flex" />
+                     <h1 className="font-headline text-lg sm:text-xl md:text-2xl font-bold tracking-tighter">
+                      انتخاب واحد هوشمند KPU
+                    </h1>
+                  </div>
                 </div>
                  <SidebarTrigger className="hidden md:flex" />
             </header>
-            <main className="p-4 md:p-6 lg:p-8 flex-1">
+            <main className="p-2 sm:p-4 md:p-6 lg:p-8 flex-1">
               <CourseScheduler />
             </main>
             <footer className="bg-card/50 text-center text-sm text-muted-foreground p-4 border-t mt-auto">

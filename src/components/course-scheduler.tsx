@@ -272,14 +272,12 @@ export default function CourseScheduler() {
 
             const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr) return [];
-                // Regex to match day names exactly and avoid partial matches (e.g. "شنبه" in "پنجشنبه")
-                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)\b/g;
+                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه)\b/g;
                 const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
                 const lines = timeslotStr.split('\n');
                 const results: string[] = [];
 
                 lines.forEach(line => {
-                    // Match only lines starting with "درس"
                     if (line.trim().startsWith('درس')) {
                        const dayMatch = line.match(dayRegex);
                        const timeMatch = line.match(timeRegex);
@@ -305,7 +303,6 @@ export default function CourseScheduler() {
             const instructorName = row.instructorName || "نامشخص";
             const instructorId = String(instructorName).replace(/\s+/g, '-').toLowerCase();
 
-            // Handle multiple locations separated by ;
             const locationsRaw = row.location ? String(row.location).split(';') : [];
             const locations = timeslots.map((_, index) => locationsRaw[index] || locationsRaw[0] || 'مشخص نشده');
 
@@ -573,14 +570,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
 
   return (
     <>
-        <div className="space-y-8">
+        <div className="space-y-6">
             <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="api-settings" className="border-b-0">
-                <Card className="shadow-lg">
+                <Card className="shadow-md">
                     <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
-                        <CardHeader className="p-0">
+                        <CardHeader className="p-0 text-right">
                             <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
-                            <CardDescription>برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
+                            <CardDescription className="text-right">برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
                         </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -608,7 +605,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                 value={apiKey}
                                 onChange={handleApiKeyChange}
                                 />
-                                <Button onClick={handleSaveApiKey} className="w-full sm:w-auto"><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                                <Button onClick={handleSaveApiKey} className="w-full sm:w-auto shrink-0"><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
                             </div>
                             </div>
                         </div>
@@ -619,7 +616,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             </Accordion>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="shadow-lg">
+                <Card className="shadow-md">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                         <CardDescription>بازه‌های زمانی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
@@ -657,10 +654,10 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-lg">
+                <Card className="shadow-md">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
-                        <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
+                        <CardDescription>گروه‌های درسی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <div className="flex items-end gap-2">
@@ -688,17 +685,17 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 </Card>
             </div>
             
-            <Card className="shadow-lg">
+            <Card className="shadow-md">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
                 <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
                 <Tabs defaultValue="excel">
-                <TabsList className="flex flex-col sm:flex-row h-auto">
-                    <TabsTrigger value="pdf" disabled={isProcessing || !apiKey} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
-                    <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
-                    <TabsTrigger value="manual" disabled={isProcessing} className="w-full sm:w-auto"><ListPlus className="ml-2" /> دستی</TabsTrigger>
+                <TabsList className="grid grid-cols-1 sm:grid-cols-3 h-auto">
+                    <TabsTrigger value="pdf" disabled={isProcessing || !apiKey}><FileUp className="ml-2" /> PDF</TabsTrigger>
+                    <TabsTrigger value="excel" disabled={isProcessing}><Sheet className="ml-2" /> اکسل</TabsTrigger>
+                    <TabsTrigger value="manual" disabled={isProcessing}><ListPlus className="ml-2" /> دستی</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pdf" className="pt-4">
                     <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند. لطفاً کلید API خود را در تنظیمات وارد کنید." />
@@ -719,7 +716,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             </CardContent>
             </Card>
 
-            <Card className="shadow-lg">
+            <Card className="shadow-md">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -760,13 +757,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                     <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
                                     <div className="space-y-2">
                                         {courses.map(course => (
-                                            <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
-                                                <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                                            <div key={course.id} className="flex items-start justify-between p-3 rounded-lg border bg-secondary/50">
+                                                <div className="flex items-start gap-3 flex-1 overflow-hidden">
                                                     <Checkbox 
                                                     id={`manual-select-${course.id}`}
                                                     checked={manuallySelectedCourseIds.has(course.id)}
                                                     onCheckedChange={(checked) => handleManualCourseSelect(course.id, !!checked)}
                                                     aria-label={`انتخاب درس ${course.name}`}
+                                                    className="mt-1"
                                                     />
                                                     <div className="flex-1 overflow-hidden">
                                                         <p className="font-medium text-sm truncate">{course.name} ({course.code})</p>
@@ -774,7 +772,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                                         <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center flex-shrink-0">
+                                                <div className="flex items-center flex-shrink-0 -mr-2">
                                                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
@@ -833,11 +831,11 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             
             <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="preferences" className="border-b-0">
-                <Card className="shadow-lg">
+                <Card className="shadow-md">
                 <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
-                    <CardHeader className="p-0">
+                    <CardHeader className="p-0 text-right">
                         <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
-                        <CardDescription>به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
+                        <CardDescription className="text-right">به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                     </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -871,10 +869,10 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
         
             <div className="w-full">
                 <Tabs defaultValue="system-schedule">
-                <TabsList className="flex h-auto flex-col sm:flex-row">
-                    <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
-                    <TabsTrigger value="ai-schedule" className="w-full sm:w-auto" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
-                    <TabsTrigger value="manual-schedule" className="w-full sm:w-auto"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto">
+                    <TabsTrigger value="system-schedule"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+                    <TabsTrigger value="ai-schedule" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
+                    <TabsTrigger value="manual-schedule"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
                 </TabsList>
                 <TabsContent value="system-schedule">
                     <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />

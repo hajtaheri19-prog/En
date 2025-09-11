@@ -293,7 +293,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         return (
           <div
             key={`${index}-${tsIndex}`}
-            className={`p-1.5 rounded-lg border text-xs flex flex-col justify-center overflow-hidden shadow-sm h-full ${colorClass}`}
+            className={`p-2 rounded-lg border text-xs flex flex-col justify-center overflow-hidden shadow-sm h-full ${colorClass}`}
             style={{ 
               gridRow: pos.gridRow, 
               gridColumn: pos.gridColumn,
@@ -351,9 +351,9 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
 
   return (
-    <Card className="shadow-lg h-full sticky top-8">
+    <Card className="shadow-md h-full sticky top-8">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
+        <div className="flex-1">
             <CardTitle className="font-headline flex items-center gap-2">
             <CalendarDays />
             {title}
@@ -362,19 +362,20 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 {description}
             </CardDescription>
         </div>
-        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
+        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
             <div className="flex items-center space-x-2 space-x-reverse">
               <Switch 
                 id="show-secondary-slots" 
                 checked={showSecondarySlots}
                 onCheckedChange={setShowSecondarySlots}
+                disabled={timeSlots.length === 0}
               />
-              <Label htmlFor="show-secondary-slots" className="text-sm">نمایش سانس‌های فرعی</Label>
+              <Label htmlFor="show-secondary-slots" className="text-sm shrink-0">نمایش سانس‌های فرعی</Label>
             </div>
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="shrink-0">
                   <Download className="ml-2 h-4 w-4" />
                   خروجی
                 </Button>
@@ -397,14 +398,14 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-2 sm:p-6">
+      <CardContent className="p-2 sm:p-4">
         {isLoading ? (
           renderSkeleton()
         ) : (
           <div className="overflow-x-auto pb-4">
              <div
                 ref={scheduleRef} 
-                className="grid gap-px bg-background p-1 min-w-[900px] border border-border"
+                className="grid gap-px bg-background p-1 min-w-[900px] border"
                 style={{
                   gridTemplateColumns: `80px repeat(${sortedTimeSlots.length}, minmax(120px, 1fr))`,
                   gridTemplateRows: `auto repeat(${days.length}, 1fr)`,
@@ -412,22 +413,22 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
                 }}
              >
                 {/* Top-left empty cell */}
-                <div className="bg-card border-b border-l border-border sticky right-0 z-20"></div>
+                <div className="bg-card sticky right-0 z-20 border-b border-l"></div>
 
                 {/* Time Slot Headers */}
                 {sortedTimeSlots.map((ts, index) => (
-                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l border-border z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
                     <div>{ts.name}</div>
-                    <div className="font-mono">{toPersianDigits(ts.start)}-{toPersianDigits(ts.end)}</div>
+                    <div className="font-mono tracking-tighter">{toPersianDigits(ts.start)}-{toPersianDigits(ts.end)}</div>
                   </div>
                 ))}
 
                 {/* Day Headers and Grid Cells */}
                 {days.map((day, dayIndex) => (
                   <React.Fragment key={day}>
-                      <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l border-border z-10" style={{ gridRow: `${dayIndex + 2} / span 1` }}>{day}</div>
+                      <div className="text-center font-semibold text-muted-foreground text-sm p-2 sticky right-0 bg-card border-b border-l z-10 flex items-center justify-center" style={{ gridRow: `${dayIndex + 2} / span 1` }}>{day}</div>
                       {sortedTimeSlots.map((ts, tsIndex) => (
-                          <div key={`${day}-${ts.id}`} className="bg-secondary/20 min-h-[80px] border-b border-l border-border" style={{ gridColumn: `${tsIndex + 2} / span 1`, gridRow: `${dayIndex + 2} / span 1` }}></div>
+                          <div key={`${day}-${ts.id}`} className="bg-secondary/20 min-h-[80px] border-b border-l" style={{ gridColumn: `${tsIndex + 2} / span 1`, gridRow: `${dayIndex + 2} / span 1` }}></div>
                       ))}
                   </React.Fragment>
                 ))}
