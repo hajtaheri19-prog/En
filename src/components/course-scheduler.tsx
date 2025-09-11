@@ -264,8 +264,13 @@ export default function CourseScheduler() {
 
             if (row.code_group) {
                 const parts = String(row.code_group).split('_');
-                code = parts[0];
-                group = parts[1];
+                if (parts.length > 1) {
+                    code = parts[0];
+                    // Group is the last part
+                    group = parts[parts.length - 1];
+                } else {
+                    code = parts[0];
+                }
             }
 
             if (!code || !row.name) {
@@ -281,13 +286,12 @@ export default function CourseScheduler() {
                     .filter(line => line.includes('درس'))
                     .map(line => {
                         // Example: "درس(ت): چهارشنبه 09:30-11:30"
-                        const parts = line.split(' ');
+                        const parts = line.split(/[\s\:]+/); // Split by space or colon
                         if (parts.length < 2) return '';
-                        // Find day and time
-                        const day = parts.find(p => daysOfWeek.includes(p.replace(':', '')));
+                        const day = parts.find(p => daysOfWeek.includes(p));
                         const time = parts.find(p => p.includes('-'));
                         if (day && time) {
-                            return `${day.replace(':', '')} ${time}`;
+                            return `${day} ${time}`;
                         }
                         return '';
                     })
@@ -297,13 +301,22 @@ export default function CourseScheduler() {
             const instructorName = row.instructorName || "نامشخص";
             const instructorId = String(instructorName).replace(/\s+/g, '-').toLowerCase();
 
+             let locations = row.locations ? String(row.locations).split(';').map((s: string) => s.trim()) : [];
+            // If locations are not enough for all timeslots, fill with a default value.
+            if (locations.length < timeslots.length) {
+                const defaultLocation = locations.length > 0 ? locations[0] : "مشخص نشده";
+                while(locations.length < timeslots.length) {
+                    locations.push(defaultLocation);
+                }
+            }
+
             return {
                 code: String(code),
                 name: String(row.name),
                 instructors: [{ id: instructorId, name: String(instructorName) }],
                 category: row.category || "تخصصی", // Default to 'تخصصی' if not provided
                 timeslots: timeslots,
-                locations: row.locations ? String(row.locations).split(';').map((s: string) => s.trim()) : timeslots.map(() => "مشخص نشده"),
+                locations: locations,
                 group: group ? String(group) : undefined,
             };
         }).filter((c): c is Omit<Course, "id"> => c !== null);
