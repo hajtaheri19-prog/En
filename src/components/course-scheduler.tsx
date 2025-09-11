@@ -268,16 +268,22 @@ export default function CourseScheduler() {
 
             const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr) return [];
-                // This regex finds the day of the week, and the time range.
-                const regex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)\s*(\d{2}:\d{2})-(\d{2}:\d{2})/g;
-                let matches;
+                const dayRegex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)/g;
+                const timeRegex = /(\d{2}:\d{2})-(\d{2}:\d{2})/;
+                const lines = timeslotStr.split('\n');
                 const results: string[] = [];
-                // Find all matches in the string
-                while((matches = regex.exec(timeslotStr)) !== null) {
-                    // matches[1] is the day, matches[2] is start time, matches[3] is end time
-                    results.push(`${matches[1]} ${matches[2]}-${matches[3]}`);
-                    allTimeRanges.add(`${matches[2]}-${matches[3]}`);
-                }
+
+                lines.forEach(line => {
+                    const dayMatch = line.match(dayRegex);
+                    const timeMatch = line.match(timeRegex);
+
+                    if (dayMatch && timeMatch) {
+                        const day = dayMatch[0];
+                        const timeRange = timeMatch[0];
+                        results.push(`${day} ${timeRange}`);
+                        allTimeRanges.add(timeRange);
+                    }
+                });
                 return results;
             }
 
@@ -570,7 +576,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                             </div>
                             <div className="space-y-2">
                             <Label htmlFor="api-key">کلید API</Label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <Input
                                 id="api-key"
                                 type="password"
@@ -578,7 +584,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                                 value={apiKey}
                                 onChange={handleApiKeyChange}
                                 />
-                                <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                                <Button onClick={handleSaveApiKey} className="w-full sm:w-auto"><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
                             </div>
                             </div>
                         </div>
@@ -696,12 +702,12 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     <CardDescription className="mt-1">
                         {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
                     </CardDescription>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                        <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0} className="w-full">
                             <Save className="ml-1 h-4 w-4" />
                             ذخیره
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing}>
+                        <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing} className="w-full">
                             <FolderOpen className="ml-1 h-4 w-4" />
                             بازیابی
                         </Button>

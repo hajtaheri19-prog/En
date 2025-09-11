@@ -350,7 +350,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
             <CalendarDays />
             {title}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
                 {description}
             </CardDescription>
         </div>
