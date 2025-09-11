@@ -22,9 +22,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "نام درس باید حداقل ۲ حرف باشد." }),
   code: z.string().min(3, { message: "کد درس باید حداقل ۳ حرف باشد." }),
   instructorName: z.string().min(2, { message: "نام استاد باید حداقل ۲ حرف باشد." }),
-  category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"], {
-    required_error: "انتخاب دسته‌بندی الزامی است.",
-  }),
+  category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"]).optional(),
   schedule: z.array(scheduleSchema).min(1, "حداقل یک زمان‌بندی برای درس مورد نیاز است."),
   group: z.string().optional(),
 });
@@ -89,7 +87,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
             name: values.name,
             code: values.code,
             instructors: [{ id: instructorId, name: values.instructorName }],
-            category: values.category,
+            category: values.category || "تخصصی",
             timeslots: values.schedule.map(s => {
                 const timeSlot = timeSlots.find(ts => ts.id === s.timeSlotId);
                 return `${s.day} ${timeSlot?.start}-${timeSlot?.end}`;
@@ -152,7 +150,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
                   <FormItem>
                     <FormLabel>دسته‌بندی</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} dir="rtl">
-                      <FormControl><SelectTrigger><SelectValue placeholder="یک دسته‌بندی را انتخاب کنید" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder="انتخاب دسته‌بندی (اختیاری)" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value="عمومی">عمومی</SelectItem>
                         <SelectItem value="تخصصی">تخصصی</SelectItem>
@@ -186,7 +184,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
               <FormLabel>زمان و مکان کلاس‌ها</FormLabel>
               {fields.map((field, index) => (
                 <div key={field.id} className="flex flex-col sm:flex-row items-end gap-2 p-2 border rounded-lg bg-secondary/30">
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="w-full flex-1 flex flex-col gap-2">
                     <FormField
                       control={form.control}
                       name={`schedule.${index}.day`}
@@ -232,7 +230,7 @@ export default function EditCourseDialog({ course, onUpdateCourse, onOpenChange,
                     />
                   </div>
                   {fields.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="shrink-0 mt-2 sm:mt-0">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}

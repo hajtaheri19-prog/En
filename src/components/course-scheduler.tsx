@@ -232,25 +232,21 @@ export default function CourseScheduler() {
             throw new Error('فایل اکسل خالی است یا داده‌ای ندارد.');
         }
 
-        const header = data[0];
-        const columnMap: { [key: string]: string } = {
-            'کد درس': 'code',
-            'نام درس': 'name',
-            'نام استاد': 'instructorName',
-            'دسته بندی': 'category',
-            'زمانبندی': 'timeslots',
-            'مکان': 'locations',
-            'گروه': 'group',
-            'شماره و گروه درس': 'code_group',
-            'ساعات ارائه و امتحان': 'schedule_exam',
+        const persianToEnglishMap: { [key: string]: string } = {
+            "شماره و گروه درس": "code_group",
+            "نام درس": "name",
+            "نام استاد": "instructorName",
+            "دسته بندی": "category",
+            "ساعات ارائه اول": "timeslot1",
+            "ساعات ارائه دوم": "timeslot2",
+            "مکان": "location"
         };
-
+        
         const mappedData = data.map(row => {
             const newRow: { [key: string]: any } = {};
             for (const key in row) {
-                const mappedKey = Object.keys(columnMap).find(persianKey => key.includes(persianKey));
-                if (mappedKey) {
-                    newRow[columnMap[mappedKey]] = row[key];
+                if(persianToEnglishMap[key]) {
+                    newRow[persianToEnglishMap[key]] = row[key];
                 } else {
                     newRow[key] = row[key];
                 }
@@ -259,63 +255,47 @@ export default function CourseScheduler() {
         });
 
         const parsedCourses: Omit<Course, "id">[] = mappedData.map((row: any) => {
-            let code = row.code;
-            let group = row.group;
-
-            if (row.code_group) {
-                const parts = String(row.code_group).split('_');
-                if (parts.length > 1) {
-                    code = parts[0];
-                    group = parts[parts.length - 1].slice(-2);
-                } else {
-                    code = parts[0];
-                }
-            }
-
-            if (!code || !row.name) {
+            if (!row.code_group || !row.name) {
                 return null;
             }
 
-            let timeslots: string[] = [];
-            if (row.timeslots) {
-                timeslots = String(row.timeslots).split(';').map((s: string) => s.trim());
-            } else if (row.schedule_exam) {
-                const scheduleLines = String(row.schedule_exam).split('\n');
-                timeslots = scheduleLines
-                    .filter(line => line.includes('درس'))
-                    .map(line => {
-                        const parts = line.split(/[\s\:]+/);
-                        if (parts.length < 2) return '';
-                        const day = parts.find(p => daysOfWeek.includes(p));
-                        const time = parts.find(p => p.includes('-'));
-                        if (day && time) {
-                            return `${day} ${time}`;
-                        }
-                        return '';
-                    })
-                    .filter(Boolean);
+            const codeGroup = String(row.code_group);
+            const [code, group] = codeGroup.includes('_') 
+                ? [codeGroup.split('_')[0], codeGroup.split('_')[1].slice(-2)]
+                : [codeGroup, undefined];
+
+            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
+                if (!timeslotStr) return [];
+                const regex = /(شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|جمعه)\s*(\d{2}:\d{2})-(\d{2}:\d{2})/g;
+                let matches;
+                const results: string[] = [];
+                while((matches = regex.exec(timeslotStr)) !== null) {
+                    results.push(`${matches[1]} ${matches[2]}-${matches[3]}`);
+                }
+                return results;
             }
+
+            const timeslots = [
+                ...parseTimeslotString(row.timeslot1),
+                ...parseTimeslotString(row.timeslot2),
+            ];
             
+            if (timeslots.length === 0) return null; // Skip if no valid timeslot found
+
             const instructorName = row.instructorName || "نامشخص";
             const instructorId = String(instructorName).replace(/\s+/g, '-').toLowerCase();
 
-             let locations = row.locations ? String(row.locations).split(';').map((s: string) => s.trim()) : [];
-            // If locations are not enough for all timeslots, fill with a default value.
-            if (locations.length < timeslots.length) {
-                const defaultLocation = locations.length > 0 ? locations[0] : "مشخص نشده";
-                while(locations.length < timeslots.length) {
-                    locations.push(defaultLocation);
-                }
-            }
+            // Default location for all timeslots
+            const locations = Array(timeslots.length).fill(row.location || 'مشخص نشده');
 
             return {
-                code: String(code),
+                code: code,
                 name: String(row.name),
                 instructors: [{ id: instructorId, name: String(instructorName) }],
-                category: row.category || "تخصصی", // Default to 'تخصصی' if not provided
+                category: row.category || "تخصصی",
                 timeslots: timeslots,
                 locations: locations,
-                group: group ? String(group) : undefined,
+                group: group,
             };
         }).filter((c): c is Omit<Course, "id"> => c !== null);
 
@@ -339,7 +319,7 @@ export default function CourseScheduler() {
         console.error("خطا در پردازش اکسل:", error);
         toast({
             title: "خطا در پردازش فایل",
-            description: error.message || "ساختار فایل اکسل صحیح نیست. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند.",
+            description: error.message || "ساختار فایل اکسل صحیح نیست. لطفاً فایل نمونه را بررسی کنید.",
             variant: "destructive",
         });
     }
@@ -530,331 +510,331 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
   }
 
   return (
-    <div className="flex flex-col gap-8">
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="api-settings" className="border-b-0">
-            <Card className="shadow-lg">
-                <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
-                    <CardHeader className="p-0">
-                        <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
-                        <CardDescription>برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
-                    </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="pt-6 p-4 sm:p-6">
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
-                            <Select value={apiProvider} onValueChange={handleApiProviderChange}>
-                                <SelectTrigger id="api-provider">
-                                    <SelectValue placeholder="یک ارائه دهنده را انتخاب کنید" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                                    <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
-                                </SelectContent>
-                            </Select>
+    <>
+        <div className="space-y-8">
+            <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="api-settings" className="border-b-0">
+                <Card className="shadow-lg">
+                    <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
+                        <CardHeader className="p-0">
+                            <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
+                            <CardDescription>برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
+                        </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardContent className="pt-6 p-4 sm:p-6">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
+                                <Select value={apiProvider} onValueChange={handleApiProviderChange}>
+                                    <SelectTrigger id="api-provider">
+                                        <SelectValue placeholder="یک ارائه دهنده را انتخاب کنید" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="gemini">Google (Gemini)</SelectItem>
+                                        <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                            <Label htmlFor="api-key">کلید API</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                id="api-key"
+                                type="password"
+                                placeholder="کلید API خود را وارد کنید"
+                                value={apiKey}
+                                onChange={handleApiKeyChange}
+                                />
+                                <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
+                            </div>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="api-key">کلید API</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="api-key"
-                              type="password"
-                              placeholder="کلید API خود را وارد کنید"
-                              value={apiKey}
-                              onChange={handleApiKeyChange}
-                            />
-                            <Button onClick={handleSaveApiKey}><KeyRound className="ml-2 h-4 w-4" /> ذخیره</Button>
-                          </div>
-                        </div>
-                    </div>
-                </CardContent>
-              </AccordionContent>
-            </Card>
-          </AccordionItem>
-        </Accordion>
+                    </CardContent>
+                </AccordionContent>
+                </Card>
+            </AccordionItem>
+            </Accordion>
 
-        <div className="flex flex-col md:flex-row gap-6">
-            <Card className="shadow-lg w-full md:w-1/2">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
-                    <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-end gap-2">
-                         <div className="w-full flex-1 flex flex-col sm:flex-row gap-2">
-                           <div className="flex-1 space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
+                        <CardDescription>بازه‌های زمانی کلاس‌ها را اینجا تعریف کنید.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-end gap-2">
+                            <div className="w-full flex-1 flex flex-col gap-2">
                                 <Label htmlFor="ts-name" className="text-xs">نام سانس</Label>
                                 <Input id="ts-name" value={newTimeSlot.name} onChange={e => setNewTimeSlot(p => ({...p, name: e.target.value}))} placeholder="سانس اول" />
                             </div>
-                             <div className="flex-1 space-y-2">
+                            <div className="w-full flex-1 flex flex-col gap-2">
                                 <Label htmlFor="ts-start" className="text-xs">شروع</Label>
                                 <Input id="ts-start" type="time" value={newTimeSlot.start} onChange={e => setNewTimeSlot(p => ({...p, start: e.target.value}))} />
                             </div>
-                            <div className="flex-1 space-y-2">
+                            <div className="w-full flex-1 flex flex-col gap-2">
                                 <Label htmlFor="ts-end" className="text-xs">پایان</Label>
                                 <Input id="ts-end" type="time" value={newTimeSlot.end} onChange={e => setNewTimeSlot(p => ({...p, end: e.target.value}))} />
                             </div>
+                            <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0 mt-2 sm:mt-0"><PlusCircle className="h-4 w-4"/></Button>
                         </div>
-                        <Button onClick={handleAddNewTimeSlot} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
-                    </div>
-                    {timeSlots.length > 0 && (
-                        <ScrollArea className="h-24 mt-4 pr-3">
-                            <div className="space-y-2">
-                            {timeSlots.map(ts => (
-                                <div key={ts.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
-                                    <p><span className="font-semibold">{ts.name}:</span> {toPersianDigits(ts.start)} - {toPersianDigits(ts.end)}</p>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveTimeSlot(ts.id)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                            </div>
-                        </ScrollArea>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="shadow-lg w-full md:w-1/2">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
-                    <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-end gap-2">
-                        <div className="w-full flex-1">
-                            <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
-                            <Input id="cg-name" value={newCourseGroup} onChange={e => setNewCourseGroup(e.target.value)} placeholder="مثال: گروه ۱" />
-                        </div>
-                        <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
-                    </div>
-                    {courseGroups.length > 0 && (
-                        <ScrollArea className="h-24 mt-4 pr-3">
-                            <div className="space-y-2">
-                            {courseGroups.map(cg => (
-                                <div key={cg.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
-                                    <p className="font-semibold">{cg.name}</p>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveCourseGroup(cg.id)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                            </div>
-                        </ScrollArea>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-        
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
-            <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <Tabs defaultValue="manual">
-              <TabsList className="flex flex-col sm:flex-row h-auto">
-                <TabsTrigger value="pdf" disabled={isProcessing || !apiKey} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
-                <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
-                <TabsTrigger value="manual" disabled={isProcessing} className="w-full sm:w-auto"><ListPlus className="ml-2" /> دستی</TabsTrigger>
-              </TabsList>
-              <TabsContent value="pdf" className="pt-4">
-                 <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند. لطفاً کلید API خود را در تنظیمات وارد کنید." />
-              </TabsContent>
-               <TabsContent value="excel" className="pt-4">
-                 <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
-              </TabsContent>
-               <TabsContent value="manual" className="pt-4">
-                <AddCourseForm 
-                    onAddCourse={handleAddCourse} 
-                    isProcessing={isProcessing} 
-                    timeSlots={timeSlots} 
-                    courseGroups={courseGroups}
-                    availableCourses={availableCourses}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
-             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardDescription className="mt-1">
-                    {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
-                </CardDescription>
-                 <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
-                        <Save className="ml-1 h-4 w-4" />
-                        ذخیره
-                    </Button>
-                     <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing}>
-                        <FolderOpen className="ml-1 h-4 w-4" />
-                        بازیابی
-                    </Button>
-                    <input
-                      type="file"
-                      ref={restoreInputRef}
-                      onChange={handleRestore}
-                      className="hidden"
-                      accept="application/json"
-                    />
-                </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-             <ScrollArea className="h-[300px] pr-3">
-                {availableCourses.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
-                        <FileUp className="h-10 w-10 mb-4" />
-                        <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
-                        <p className="text-sm">برای شروع، یک فایل اکسل یا به صورت دستی درس اضافه کنید.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {Object.entries(courseGroupsByName).map(([groupName, courses]) => (
-                            <div key={groupName}>
-                                <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
+                        {timeSlots.length > 0 && (
+                            <ScrollArea className="h-24 mt-4 pr-3">
                                 <div className="space-y-2">
-                                    {courses.map(course => (
-                                        <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
-                                            <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                                                <Checkbox 
-                                                  id={`manual-select-${course.id}`}
-                                                  checked={manuallySelectedCourseIds.has(course.id)}
-                                                  onCheckedChange={(checked) => handleManualCourseSelect(course.id, !!checked)}
-                                                  aria-label={`انتخاب درس ${course.name}`}
-                                                />
-                                                <div className="flex-1 overflow-hidden">
-                                                    <p className="font-medium text-sm truncate">{course.name} ({course.code})</p>
-                                                    <p className="text-xs text-muted-foreground truncate">زمان: {course.timeslots.join('، ')}</p>
-                                                    <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
+                                {timeSlots.map(ts => (
+                                    <div key={ts.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
+                                        <p><span className="font-semibold">{ts.name}:</span> {toPersianDigits(ts.start)} - {toPersianDigits(ts.end)}</p>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveTimeSlot(ts.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
+                        <CardDescription>گروه‌های درسی خود را اینجا تعریف کنید.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                        <div className="flex items-end gap-2">
+                            <div className="w-full flex-1">
+                                <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
+                                <Input id="cg-name" value={newCourseGroup} onChange={e => setNewCourseGroup(e.target.value)} placeholder="مثال: گروه ۱" />
+                            </div>
+                            <Button onClick={handleAddNewCourseGroup} size="icon" className="shrink-0"><PlusCircle className="h-4 w-4"/></Button>
+                        </div>
+                        {courseGroups.length > 0 && (
+                            <ScrollArea className="h-24 mt-4 pr-3">
+                                <div className="space-y-2">
+                                {courseGroups.map(cg => (
+                                    <div key={cg.id} className="flex justify-between items-center text-sm p-2 rounded-md bg-secondary">
+                                        <p className="font-semibold">{cg.name}</p>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveCourseGroup(cg.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
+                <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+                <Tabs defaultValue="manual">
+                <TabsList className="flex flex-col sm:flex-row h-auto">
+                    <TabsTrigger value="pdf" disabled={isProcessing || !apiKey} className="w-full sm:w-auto"><FileUp className="ml-2" /> PDF</TabsTrigger>
+                    <TabsTrigger value="excel" disabled={isProcessing} className="w-full sm:w-auto"><Sheet className="ml-2" /> اکسل</TabsTrigger>
+                    <TabsTrigger value="manual" disabled={isProcessing} className="w-full sm:w-auto"><ListPlus className="ml-2" /> دستی</TabsTrigger>
+                </TabsList>
+                <TabsContent value="pdf" className="pt-4">
+                    <CourseSelection onFileUpload={handlePdfUpload} isProcessing={isProcessing} accept="application/pdf" title="آپلود چارت درسی (PDF)" description="این قابلیت با استفاده از هوش مصنوعی کار می‌کند. لطفاً کلید API خود را در تنظیمات وارد کنید." />
+                </TabsContent>
+                <TabsContent value="excel" className="pt-4">
+                    <CourseSelection onFileUpload={handleFileUpload} isProcessing={isProcessing} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" title="آپلود چارت درسی (اکسل)" description="فایل اکسل (CSV, XLSX, XLS) را آپلود کنید. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند. برای زمان‌ها و مکان‌های چندگانه، آن‌ها را با ; از هم جدا کنید." />
+                </TabsContent>
+                <TabsContent value="manual" className="pt-4">
+                    <AddCourseForm 
+                        onAddCourse={handleAddCourse} 
+                        isProcessing={isProcessing} 
+                        timeSlots={timeSlots} 
+                        courseGroups={courseGroups}
+                        availableCourses={availableCourses}
+                    />
+                </TabsContent>
+                </Tabs>
+            </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Group /> لیست دروس موجود</CardTitle>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardDescription className="mt-1">
+                        {availableCourses.length} درس در {Object.keys(courseGroupsByName).length} گروه
+                    </CardDescription>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={handleBackup} disabled={isProcessing || availableCourses.length === 0}>
+                            <Save className="ml-1 h-4 w-4" />
+                            ذخیره
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => restoreInputRef.current?.click()} disabled={isProcessing}>
+                            <FolderOpen className="ml-1 h-4 w-4" />
+                            بازیابی
+                        </Button>
+                        <input
+                        type="file"
+                        ref={restoreInputRef}
+                        onChange={handleRestore}
+                        className="hidden"
+                        accept="application/json"
+                        />
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+                <ScrollArea className="h-[300px] pr-3">
+                    {availableCourses.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-4">
+                            <FileUp className="h-10 w-10 mb-4" />
+                            <h3 className="font-semibold mb-1">هنوز درسی اضافه نشده</h3>
+                            <p className="text-sm">برای شروع، یک فایل اکسل یا به صورت دستی درس اضافه کنید.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {Object.entries(courseGroupsByName).map(([groupName, courses]) => (
+                                <div key={groupName}>
+                                    <h4 className="font-semibold mb-2 sticky top-0 bg-card py-1">{groupName}</h4>
+                                    <div className="space-y-2">
+                                        {courses.map(course => (
+                                            <div key={course.id} className="flex items-start justify-between p-2 rounded-lg border bg-secondary/50">
+                                                <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                                                    <Checkbox 
+                                                    id={`manual-select-${course.id}`}
+                                                    checked={manuallySelectedCourseIds.has(course.id)}
+                                                    onCheckedChange={(checked) => handleManualCourseSelect(course.id, !!checked)}
+                                                    aria-label={`انتخاب درس ${course.name}`}
+                                                    />
+                                                    <div className="flex-1 overflow-hidden">
+                                                        <p className="font-medium text-sm truncate">{course.name} ({course.code})</p>
+                                                        <p className="text-xs text-muted-foreground truncate">زمان: {course.timeslots.join('، ')}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">مکان: {course.locations.join('، ')}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center flex-shrink-0">
+                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            آیا از حذف درس "{course.name}" مطمئن هستید؟ این عمل قابل بازگشت نیست.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>لغو</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveCourse(course.id)}>بله، حذف کن</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center flex-shrink-0">
-                                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <AlertDialog>
-                                                  <AlertDialogTrigger asChild>
-                                                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                  </AlertDialogTrigger>
-                                                  <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                      <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
-                                                      <AlertDialogDescription>
-                                                        آیا از حذف درس "{course.name}" مطمئن هستید؟ این عمل قابل بازگشت نیست.
-                                                      </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                      <AlertDialogCancel>لغو</AlertDialogCancel>
-                                                      <AlertDialogAction onClick={() => handleRemoveCourse(course.id)}>بله، حذف کن</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                  </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
+                </ScrollArea>
+                {availableCourses.length > 0 && (
+                    <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={isProcessing} className="w-full mt-4">
+                            <Trash2 className="ml-2 h-4 w-4" />
+                            پاک کردن همه دروس
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>آیا از پاک کردن همه دروس مطمئن هستید؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            این عمل قابل بازگشت نیست. تمام دروسی که به صورت دستی یا از طریق فایل وارد کرده‌اید برای همیشه حذف خواهند شد.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>لغو</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearAllCourses}>بله، پاک کن</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                    </AlertDialog>
                 )}
-             </ScrollArea>
-             {availableCourses.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="destructive" size="sm" disabled={isProcessing} className="w-full mt-4">
-                        <Trash2 className="ml-2 h-4 w-4" />
-                        پاک کردن همه دروس
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>آیا از پاک کردن همه دروس مطمئن هستید؟</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        این عمل قابل بازگشت نیست. تمام دروسی که به صورت دستی یا از طریق فایل وارد کرده‌اید برای همیشه حذف خواهند شد.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>لغو</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearAllCourses}>بله، پاک کن</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-            )}
-          </CardContent>
-        </Card>
-        
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="preferences" className="border-b-0">
-            <Card className="shadow-lg">
-              <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
-                  <CardHeader className="p-0">
-                    <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
-                    <CardDescription>به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
-                  </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent>
-                <CardContent className="pt-6 p-4 sm:p-6">
-                    <StudentPreferencesForm
-                        preferences={studentPreferences}
-                        onPreferencesChange={setStudentPreferences}
-                        generalCourses={availableCourses.filter(c => c.category === 'عمومی')}
-                        isProcessing={isProcessing}
-                    />
-                </CardContent>
-              </AccordionContent>
+            </CardContent>
             </Card>
-          </AccordionItem>
-        </Accordion>
+            
+            <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="preferences" className="border-b-0">
+                <Card className="shadow-lg">
+                <AccordionTrigger className="p-4 sm:p-6 text-right [&[data-state=open]]:border-b">
+                    <CardHeader className="p-0">
+                        <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
+                        <CardDescription>به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
+                    </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <CardContent className="pt-6 p-4 sm:p-6">
+                        <StudentPreferencesForm
+                            preferences={studentPreferences}
+                            onPreferencesChange={setStudentPreferences}
+                            generalCourses={availableCourses.filter(c => c.category === 'عمومی')}
+                            isProcessing={isProcessing}
+                        />
+                    </CardContent>
+                </AccordionContent>
+                </Card>
+            </AccordionItem>
+            </Accordion>
 
 
-        <Button size="lg" className="w-full shadow-lg" onClick={handleGenerateSchedule} disabled={isProcessing || availableCourses.length === 0}>
-           {isProcessing ? (
-                <>
-                  <WandSparkles className="ml-2 h-4 w-4 animate-spin" />
-                  در حال تحلیل و بررسی...
-                </>
-              ) : (
-                <>
-                  <WandSparkles className="ml-2 h-4 w-4" />
-                  ایجاد بهترین برنامه ممکن
-                </>
-            )}
-        </Button>
-      
-      <div className="w-full">
-        <Tabs defaultValue="system-schedule">
-          <TabsList className="flex h-auto flex-col sm:flex-row">
-            <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
-            <TabsTrigger value="ai-schedule" className="w-full sm:w-auto" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
-            <TabsTrigger value="manual-schedule" className="w-full sm:w-auto"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
-          </TabsList>
-          <TabsContent value="system-schedule">
-            <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
-          </TabsContent>
-          <TabsContent value="ai-schedule">
-             <ScheduleDisplay scheduleResult={aiScheduleResult} isLoading={isProcessing} timeSlots={timeSlots} isAiGenerated={true} />
-          </TabsContent>
-          <TabsContent value="manual-schedule">
-            <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} timeSlots={timeSlots} />
-          </TabsContent>
-        </Tabs>
-      </div>
-      {editingCourse && (
-        <EditCourseDialog
-          course={editingCourse}
-          onUpdateCourse={handleUpdateCourse}
-          onOpenChange={(isOpen) => !isOpen && setEditingCourse(null)}
-          timeSlots={timeSlots}
-          courseGroups={courseGroups}
-        />
-      )}
-    </div>
+            <Button size="lg" className="w-full shadow-lg" onClick={handleGenerateSchedule} disabled={isProcessing || availableCourses.length === 0}>
+            {isProcessing ? (
+                    <>
+                    <WandSparkles className="ml-2 h-4 w-4 animate-spin" />
+                    در حال تحلیل و بررسی...
+                    </>
+                ) : (
+                    <>
+                    <WandSparkles className="ml-2 h-4 w-4" />
+                    ایجاد بهترین برنامه ممکن
+                    </>
+                )}
+            </Button>
+        
+            <div className="w-full">
+                <Tabs defaultValue="system-schedule">
+                <TabsList className="flex h-auto flex-col sm:flex-row">
+                    <TabsTrigger value="system-schedule" className="w-full sm:w-auto"><WandSparkles className="ml-1" /> برنامه پیشنهادی سیستم</TabsTrigger>
+                    <TabsTrigger value="ai-schedule" className="w-full sm:w-auto" disabled={!apiKey}><BrainCircuit className="ml-1" /> پیشنهادی هوش مصنوعی</TabsTrigger>
+                    <TabsTrigger value="manual-schedule" className="w-full sm:w-auto"><Edit className="ml-1" /> برنامه دستی</TabsTrigger>
+                </TabsList>
+                <TabsContent value="system-schedule">
+                    <ScheduleDisplay scheduleResult={scheduleResult} isLoading={isProcessing} timeSlots={timeSlots} />
+                </TabsContent>
+                <TabsContent value="ai-schedule">
+                    <ScheduleDisplay scheduleResult={aiScheduleResult} isLoading={isProcessing} timeSlots={timeSlots} isAiGenerated={true} />
+                </TabsContent>
+                <TabsContent value="manual-schedule">
+                    <ScheduleDisplay manualCourses={manuallySelectedCourses} isLoading={false} timeSlots={timeSlots} />
+                </TabsContent>
+                </Tabs>
+            </div>
+        </div>
+        {editingCourse && (
+            <EditCourseDialog
+                course={editingCourse}
+                onUpdateCourse={handleUpdateCourse}
+                onOpenChange={(isOpen) => !isOpen && setEditingCourse(null)}
+                timeSlots={timeSlots}
+                courseGroups={courseGroups}
+            />
+        )}
+    </>
   );
 }

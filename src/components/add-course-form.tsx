@@ -35,9 +35,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "نام درس باید حداقل ۲ حرف باشد." }),
   code: z.string().min(3, { message: "کد درس باید حداقل ۳ حرف باشد." }),
   instructorName: z.string().min(2, { message: "نام استاد باید حداقل ۲ حرف باشد." }),
-  category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"], {
-    required_error: "انتخاب دسته‌بندی الزامی است.",
-  }),
+  category: z.enum(["عمومی", "تخصصی", "تربیتی", "فرهنگی"]).optional(),
   schedule: z.array(scheduleSchema).min(1, "حداقل یک زمان‌بندی برای درس مورد نیاز است."),
   group: z.string().optional(),
 });
@@ -98,7 +96,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
       name: values.name,
       code: values.code,
       instructors: [{ id: instructorId, name: values.instructorName }],
-      category: values.category,
+      category: values.category || "تخصصی",
       timeslots: values.schedule.map(s => {
         const timeSlot = timeSlots.find(ts => ts.id === s.timeSlotId);
         return `${s.day} ${timeSlot?.start}-${timeSlot?.end}`
@@ -180,7 +178,7 @@ export function AddCourseForm({ onAddCourse, isProcessing, timeSlots, courseGrou
                 <Select onValueChange={field.onChange} defaultValue={field.value} dir="rtl">
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="یک دسته‌بندی را انتخاب کنید" />
+                      <SelectValue placeholder="انتخاب دسته‌بندی (اختیاری)" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
