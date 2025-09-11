@@ -64,7 +64,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
     return [...timeSlots].sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
   }, [timeSlots]);
   
-  const getGridPosition = useCallback((timeslot: string) => {
+ const getGridPosition = useCallback((timeslot: string) => {
     try {
         const parts = timeslot.trim().split(/\s+/);
         if (parts.length < 2) return null;
@@ -85,38 +85,32 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = timeToMinutes(endTime);
-
-        for (let i = 0; i < sortedTimeSlots.length; i++) {
-            const slotStartMinutes = timeToMinutes(sortedTimeSlots[i].start);
-            const slotEndMinutes = timeToMinutes(sortedTimeSlots[i].end);
-             // Find the starting column
-            if (startMinutes >= slotStartMinutes && startMinutes < slotEndMinutes) {
-                startCol = i + 2;
-            }
-             // Find the ending column
-            if (endMinutes > slotStartMinutes && endMinutes <= slotEndMinutes) {
-                endCol = i + 3; // +3 because grid lines are 1-based and we need to span TO the line after the column
-            }
-        }
         
-        // Fallback for courses that span multiple slots
-        if (startCol === -1) {
-             for (let i = 0; i < sortedTimeSlots.length; i++) {
-                if (startMinutes < timeToMinutes(sortedTimeSlots[i].end)) {
-                    startCol = i + 2;
-                    break;
-                }
+        // Find the starting column (more flexible)
+        for (let i = 0; i < sortedTimeSlots.length; i++) {
+            if (startMinutes < timeToMinutes(sortedTimeSlots[i].end)) {
+                startCol = i + 2;
+                break;
             }
+        }
+        // If start time is after all slots, place it in the last one
+        if (startCol === -1 && sortedTimeSlots.length > 0) {
+            startCol = sortedTimeSlots.length + 1;
         }
 
-        if (endCol === -1) {
-            for (let i = sortedTimeSlots.length - 1; i >= 0; i--) {
-                if(endMinutes > timeToMinutes(sortedTimeSlots[i].start)) {
-                    endCol = i + 3;
-                    break;
-                }
+
+        // Find the ending column (more flexible)
+        for (let i = sortedTimeSlots.length - 1; i >= 0; i--) {
+            if (endMinutes > timeToMinutes(sortedTimeSlots[i].start)) {
+                endCol = i + 3;
+                break;
             }
         }
+         // If end time is before all slots, place it in the first one
+        if (endCol === -1 && sortedTimeSlots.length > 0) {
+            endCol = 2;
+        }
+
 
         if (startCol === -1 || endCol === -1) return null;
         
