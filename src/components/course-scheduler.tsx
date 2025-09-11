@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
@@ -228,60 +229,113 @@ export default function CourseScheduler() {
   };
 
   const processAndAddCourses = (data: any[]) => {
-      try {
-          if (!data || data.length === 0) {
-              throw new Error('فایل اکسل خالی است یا داده‌ای ندارد.');
-          }
-          const headers = Object.keys(data[0]);
-          const requiredColumns = ['code', 'name', 'instructorName', 'category', 'timeslots', 'locations'];
-          const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-          if (missingColumns.length > 0) {
-              throw new Error(`فایل اکسل ستون‌های الزامی زیر را ندارد: ${missingColumns.join(', ')}`);
-          }
+    try {
+        if (!data || data.length === 0) {
+            throw new Error('فایل اکسل خالی است یا داده‌ای ندارد.');
+        }
 
-          const parsedCourses: Omit<Course, "id">[] = data.map((row: any, index: number) => {
-              if (!row.code || !row.name || !row.instructorName || !row.category || !row.timeslots || !row.locations) {
-                console.warn(`ردیف ${index + 2} در فایل اکسل نادیده گرفته شد چون داده‌های ضروری را نداشت.`);
+        const header = data[0];
+        const columnMap: { [key: string]: string } = {
+            'کد درس': 'code',
+            'نام درس': 'name',
+            'نام استاد': 'instructorName',
+            'دسته بندی': 'category',
+            'زمانبندی': 'timeslots',
+            'مکان': 'locations',
+            'گروه': 'group',
+            'شماره و گروه درس': 'code_group',
+            'ساعات ارائه و امتحان': 'schedule_exam',
+        };
+
+        const mappedData = data.map(row => {
+            const newRow: { [key: string]: any } = {};
+            for (const key in row) {
+                const mappedKey = Object.keys(columnMap).find(persianKey => key.includes(persianKey));
+                if (mappedKey) {
+                    newRow[columnMap[mappedKey]] = row[key];
+                } else {
+                    newRow[key] = row[key];
+                }
+            }
+            return newRow;
+        });
+
+        const parsedCourses: Omit<Course, "id">[] = mappedData.map((row: any) => {
+            let code = row.code;
+            let group = row.group;
+
+            if (row.code_group) {
+                const parts = String(row.code_group).split('_');
+                code = parts[0];
+                group = parts[1];
+            }
+
+            if (!code || !row.name) {
                 return null;
-              }
-              const instructorId = String(row.instructorName).replace(/\s+/g, '-').toLowerCase();
-              return {
-                  code: String(row.code),
-                  name: String(row.name),
-                  instructors: [{ id: instructorId, name: String(row.instructorName) }],
-                  category: row.category,
-                  timeslots: String(row.timeslots).split(';').map((s: string) => s.trim()),
-                  locations: String(row.locations).split(';').map((s: string) => s.trim()),
-                  group: row.group ? String(row.group) : undefined,
-              };
-          }).filter((c): c is Omit<Course, "id"> => c !== null);
+            }
 
-          const coursesWithIds = parsedCourses.map(course => ({
-              ...course,
-              id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
-          }));
+            let timeslots: string[] = [];
+            if (row.timeslots) {
+                timeslots = String(row.timeslots).split(';').map((s: string) => s.trim());
+            } else if (row.schedule_exam) {
+                const scheduleLines = String(row.schedule_exam).split('\n');
+                timeslots = scheduleLines
+                    .filter(line => line.includes('درس'))
+                    .map(line => {
+                        // Example: "درس(ت): چهارشنبه 09:30-11:30"
+                        const parts = line.split(' ');
+                        if (parts.length < 2) return '';
+                        // Find day and time
+                        const day = parts.find(p => daysOfWeek.includes(p.replace(':', '')));
+                        const time = parts.find(p => p.includes('-'));
+                        if (day && time) {
+                            return `${day.replace(':', '')} ${time}`;
+                        }
+                        return '';
+                    })
+                    .filter(Boolean);
+            }
+            
+            const instructorName = row.instructorName || "نامشخص";
+            const instructorId = String(instructorName).replace(/\s+/g, '-').toLowerCase();
 
-          const newCourses = coursesWithIds.filter(
-              (newCourse) => !availableCourses.some(
-                  (existing) => existing.code === newCourse.code && existing.group === newCourse.group
-              )
-          );
+            return {
+                code: String(code),
+                name: String(row.name),
+                instructors: [{ id: instructorId, name: String(instructorName) }],
+                category: row.category || "تخصصی", // Default to 'تخصصی' if not provided
+                timeslots: timeslots,
+                locations: row.locations ? String(row.locations).split(';').map((s: string) => s.trim()) : timeslots.map(() => "مشخص نشده"),
+                group: group ? String(group) : undefined,
+            };
+        }).filter((c): c is Omit<Course, "id"> => c !== null);
 
-          setAvailableCourses(prev => [...prev, ...newCourses]);
-          toast({
-              title: "استخراج موفق",
-              description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد.`,
-          });
-      } catch (error: any) {
-          console.error("خطا در پردازش اکسل:", error);
-          toast({
-              title: "خطا در پردازش فایل",
-              description: error.message || "ساختار فایل اکسل صحیح نیست.",
-              variant: "destructive",
-          });
-      }
-  }
+        const coursesWithIds = parsedCourses.map(course => ({
+            ...course,
+            id: `${course.code}-${course.group || 'X'}-${Math.random().toString(36).substring(7)}`,
+        }));
 
+        const newCourses = coursesWithIds.filter(
+            (newCourse) => !availableCourses.some(
+                (existing) => existing.code === newCourse.code && existing.group === newCourse.group
+            )
+        );
+
+        setAvailableCourses(prev => [...prev, ...newCourses]);
+        toast({
+            title: "استخراج موفق",
+            description: `${newCourses.length} درس جدید از فایل اکسل استخراج شد.`,
+        });
+    } catch (error: any) {
+        console.error("خطا در پردازش اکسل:", error);
+        toast({
+            title: "خطا در پردازش فایل",
+            description: error.message || "ساختار فایل اکسل صحیح نیست. ستون‌ها باید شامل 'نام درس' و 'شماره و گروه درس' باشند.",
+            variant: "destructive",
+        });
+    }
+}
+const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
   const handleFileUpload = (file: File) => {
       startProcessingTransition(() => {
           const reader = new FileReader();
@@ -676,9 +730,25 @@ export default function CourseScheduler() {
                                                 <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-8 w-8" onClick={() => setEditingCourse(course)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8" onClick={() => handleRemoveCourse(course.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <AlertDialog>
+                                                  <AlertDialogTrigger asChild>
+                                                     <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                      <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
+                                                      <AlertDialogDescription>
+                                                        آیا از حذف درس "{course.name}" مطمئن هستید؟ این عمل قابل بازگشت نیست.
+                                                      </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                      <AlertDialogCancel>لغو</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleRemoveCourse(course.id)}>بله، حذف کن</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                                </AlertDialog>
                                             </div>
                                         </div>
                                     ))}
