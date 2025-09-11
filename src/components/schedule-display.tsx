@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import type { SuggestOptimalScheduleOutput } from "@/ai/flows/suggest-optimal-schedule";
-import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon, BrainCircuit, Filter } from "lucide-react";
+import { AlertCircle, CalendarDays, Lightbulb, Group, Download, FileDown, ImageDown, Sheet as ExcelIcon, BrainCircuit, Filter, Settings } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Button } from "./ui/button";
-import { useRef, useCallback, useMemo, useState } from "react";
+import { useRef, useCallback, useMemo, useState, useEffect } from "react";
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import Papa from 'papaparse';
@@ -18,6 +18,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
@@ -56,13 +59,40 @@ interface Conflict {
   timeslot: string;
 }
 
+const initialDisplayOptions = {
+    showCourseCode: true,
+    showInstructor: true,
+    showLocation: true,
+    showGroup: false,
+};
+
 
 export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoading, timeSlots, isAiGenerated = false }: ScheduleDisplayProps) {
   const scheduleRef = useRef<HTMLDivElement>(null);
+  const [isClient, setIsClient] = useState(false);
   const [showSecondarySlots, setShowSecondarySlots] = useState(false);
   const [showThursday, setShowThursday] = useState(false);
+  const [displayOptions, setDisplayOptions] = useState(initialDisplayOptions);
   
   const isManualMode = manualCourses !== undefined;
+
+  useEffect(() => {
+    setIsClient(true);
+    try {
+        const storedOptions = localStorage.getItem('schedule-display-options');
+        if (storedOptions) {
+            setDisplayOptions(JSON.parse(storedOptions));
+        }
+    } catch (e) {
+        console.error("Failed to load display options from localStorage", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+        localStorage.setItem('schedule-display-options', JSON.stringify(displayOptions));
+    }
+  }, [displayOptions, isClient]);
 
   const days = useMemo(() => allDays.filter(day => showThursday || day !== "پنجشنبه"), [showThursday]);
 
@@ -97,27 +127,23 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = timeToMinutes(endTime);
         
-        // Find the starting column (more flexible)
         for (let i = 0; i < sortedTimeSlots.length; i++) {
             if (startMinutes < timeToMinutes(sortedTimeSlots[i].end)) {
                 startCol = i + 2;
                 break;
             }
         }
-        // If start time is after all slots, place it in the last one
         if (startCol === -1 && sortedTimeSlots.length > 0) {
             startCol = sortedTimeSlots.length + 1;
         }
 
 
-        // Find the ending column (more flexible)
         for (let i = sortedTimeSlots.length - 1; i >= 0; i--) {
             if (endMinutes > timeToMinutes(sortedTimeSlots[i].start)) {
                 endCol = i + 3;
                 break;
             }
         }
-         // If end time is before all slots, place it in the first one
         if (endCol === -1 && sortedTimeSlots.length > 0) {
             endCol = 2;
         }
@@ -302,9 +328,10 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
               gridColumn: pos.gridColumn,
             }}
           >
-            <p className="font-bold truncate">{item.courseName}</p>
-            <p className="opacity-80 truncate">{item.instructor}</p>
-            <p className="opacity-60 mt-0.5 truncate">{locations[tsIndex] || item.location}</p>
+            <p className="font-bold truncate">{item.courseName} {displayOptions.showCourseCode && `(${item.courseCode})`}</p>
+            {displayOptions.showInstructor && <p className="opacity-80 truncate">{item.instructor}</p>}
+            {displayOptions.showLocation && <p className="opacity-60 mt-0.5 truncate">{locations[tsIndex] || item.location}</p>}
+            {displayOptions.showGroup && item.group && <p className="opacity-60 mt-0.5 truncate">گروه: {item.group}</p>}
           </div>
         );
       });
@@ -383,6 +410,44 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
               />
               <Label htmlFor="show-thursday" className="text-sm shrink-0">نمایش پنج‌شنبه</Label>
             </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0 h-9 w-9">
+                  <Settings className="h-4 w-4" />
+                   <span className="sr-only">تنظیمات نمایش جدول</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>نمایش اطلاعات اضافی</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={displayOptions.showCourseCode}
+                  onCheckedChange={(checked) => setDisplayOptions(prev => ({...prev, showCourseCode: !!checked}))}
+                >
+                  کد درس
+                </DropdownMenuCheckboxItem>
+                 <DropdownMenuCheckboxItem
+                  checked={displayOptions.showInstructor}
+                  onCheckedChange={(checked) => setDisplayOptions(prev => ({...prev, showInstructor: !!checked}))}
+                >
+                  نام استاد
+                </DropdownMenuCheckboxItem>
+                 <DropdownMenuCheckboxItem
+                  checked={displayOptions.showLocation}
+                  onCheckedChange={(checked) => setDisplayOptions(prev => ({...prev, showLocation: !!checked}))}
+                >
+                  مکان کلاس
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={displayOptions.showGroup}
+                  onCheckedChange={(checked) => setDisplayOptions(prev => ({...prev, showGroup: !!checked}))}
+                >
+                  گروه درسی
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
          {(scheduleItems.length > 0 || (isManualMode && manualCourses && manualCourses.length > 0)) && !isLoading && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
