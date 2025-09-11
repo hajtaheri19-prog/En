@@ -268,10 +268,13 @@ export default function CourseScheduler() {
 
             const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr) return [];
-                const regex = /(شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|جمعه)\s*(\d{2}:\d{2})-(\d{2}:\d{2})/g;
+                // This regex finds the day of the week, and the time range.
+                const regex = /(پنجشنبه|چهارشنبه|سه‌شنبه|دوشنبه|یکشنبه|شنبه|جمعه)\s*(\d{2}:\d{2})-(\d{2}:\d{2})/g;
                 let matches;
                 const results: string[] = [];
+                // Find all matches in the string
                 while((matches = regex.exec(timeslotStr)) !== null) {
+                    // matches[1] is the day, matches[2] is start time, matches[3] is end time
                     results.push(`${matches[1]} ${matches[2]}-${matches[3]}`);
                     allTimeRanges.add(`${matches[2]}-${matches[3]}`);
                 }
@@ -327,7 +330,7 @@ export default function CourseScheduler() {
                     const [start, end] = range.split('-');
                     newTimeSlotsToAdd.push({
                         id: `ts-${Date.now()}-${Math.random()}`,
-                        name: `سانس ${timeSlotCounter++}`,
+                        name: `سانس ${toPersianDigits(String(timeSlotCounter++))}`,
                         start,
                         end,
                     });
@@ -459,6 +462,8 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
   const handleClearAllCourses = () => {
     setAvailableCourses([]);
     setManuallySelectedCourseIds(new Set());
+    setScheduleResult(null);
+    setAiScheduleResult(null);
     toast({
         title: "همه دروس پاک شدند",
         description: "لیست دروس موجود اکنون خالی است.",
@@ -485,7 +490,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
   const courseGroupsByName = useMemo(() => {
     const groups: Record<string, Course[]> = {};
     availableCourses.forEach(course => {
-        const groupKey = course.group || 'عمومی/بدون گروه';
+        const groupKey = course.group ? `گروه ${course.group}` : 'عمومی/بدون گروه';
         if (!groups[groupKey]) {
             groups[groupKey] = [];
         }
