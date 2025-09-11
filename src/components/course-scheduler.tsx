@@ -317,7 +317,7 @@ export default function CourseScheduler() {
            const parseTimeslotString = (timeslotStr: string | undefined): string[] => {
                 if (!timeslotStr || typeof timeslotStr !== 'string') return [];
             
-                const daysRegex = /(یک ?شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
+                const daysRegex = /(یکشنبه|یک شنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|شنبه)/g;
                 const timeRegex = /(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/;
             
                 const lines = timeslotStr.split('\n');
@@ -883,6 +883,7 @@ export default function CourseScheduler() {
                                                     />
                                                     <div className="flex-1 overflow-hidden">
                                                         <p className="truncate text-sm font-medium">{course.name} ({course.code})</p>
+                                                        <p className="truncate text-xs text-muted-foreground">استاد: {course.instructors.map(i => i.name).join(', ')}</p>
                                                         <p className="truncate text-xs text-muted-foreground">زمان: {course.timeslots.join('، ')}</p>
                                                         <p className="truncate text-xs text-muted-foreground">مکان: {course.locations.join('، ')}</p>
                                                     </div>
