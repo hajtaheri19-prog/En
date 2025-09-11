@@ -398,7 +398,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-2 sm:p-4">
+      <CardContent className="p-4">
         {isLoading ? (
           renderSkeleton()
         ) : (
@@ -417,7 +417,7 @@ export default function ScheduleDisplay({ scheduleResult, manualCourses, isLoadi
 
                 {/* Time Slot Headers */}
                 {sortedTimeSlots.map((ts, index) => (
-                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-xs p-2 bg-card border-b border-l z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
+                  <div key={ts.id} className="text-center font-semibold text-muted-foreground text-sm p-2 bg-card border-b border-l z-10" style={{ gridColumn: `${index + 2} / span 1` }}>
                     <div>{ts.name}</div>
                     <div className="font-mono tracking-tighter">{toPersianDigits(ts.start)}-{toPersianDigits(ts.end)}</div>
                   </div>

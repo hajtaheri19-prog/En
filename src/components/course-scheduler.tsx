@@ -611,14 +611,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="view-settings" className="border-b-0">
                     <Card className="shadow-md">
-                        <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
+                        <AccordionTrigger className="w-full p-6 text-right [&[data-state=open]]:border-b">
                             <CardHeader className="p-0 text-right">
                                 <CardTitle className="flex items-center gap-2"><SlidersHorizontal /> تنظیمات نمایش</CardTitle>
                                 <CardDescription className="text-right">بخش‌های مختلف برنامه را نمایش داده یا مخفی کنید.</CardDescription>
                             </CardHeader>
                         </AccordionTrigger>
                         <AccordionContent>
-                           <CardContent className="p-4 pt-6 sm:p-6">
+                           <CardContent className="p-6">
                                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                     {Object.entries({
                                         api: 'تنظیمات API',
@@ -653,14 +653,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             {viewSettings.api && <Accordion type="single" collapsible className="w-full" defaultValue="api-settings">
             <AccordionItem value="api-settings" className="border-b-0">
                 <Card className="shadow-md">
-                    <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
+                    <AccordionTrigger className="w-full p-6 text-right [&[data-state=open]]:border-b">
                         <CardHeader className="p-0 text-right">
                             <CardTitle className="flex items-center gap-2"><Settings /> تنظیمات API</CardTitle>
                             <CardDescription className="text-right">برای فعالسازی قابلیت‌های هوشمند، کلید API را وارد کنید.</CardDescription>
                         </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
-                    <CardContent className="p-4 pt-6 sm:p-6">
+                    <CardContent className="p-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="api-provider">ارائه دهنده هوش مصنوعی</Label>
@@ -700,7 +700,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                         <CardTitle className="flex items-center gap-2"><Clock /> مدیریت سانس‌ها</CardTitle>
                         <CardDescription>بازه‌های زمانی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-6">
                         <div className="flex flex-col items-end gap-2 sm:flex-row">
                              <div className="grid w-full grid-cols-1 flex-1 gap-2 sm:grid-cols-3">
                                 <div className="flex w-full flex-1 flex-col gap-2">
@@ -740,7 +740,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                         <CardTitle className="flex items-center gap-2"><Group /> مدیریت گروه‌ها</CardTitle>
                         <CardDescription>گروه‌های درسی به صورت خودکار از فایل اکسل مدیریت می‌شوند.</CardDescription>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6">
+                    <CardContent className="p-6">
                         <div className="flex flex-col items-end gap-2 sm:flex-row">
                             <div className="w-full flex-1">
                                 <Label htmlFor="cg-name" className="text-xs">نام گروه</Label>
@@ -771,7 +771,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                 <CardTitle className="flex items-center gap-2"><ListPlus /> افزودن دروس</CardTitle>
                 <CardDescription>دروس را به صورت دستی یا با آپلود چارت درسی اضافه کنید.</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-6">
                 <Tabs defaultValue="excel">
                 <TabsList className="grid h-auto grid-cols-1 sm:grid-cols-3">
                     <TabsTrigger value="pdf" disabled={isProcessing || !apiKey}><FileUp className="ml-2" /> PDF</TabsTrigger>
@@ -823,7 +823,7 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-6">
                 <ScrollArea className="h-[400px] pr-3">
                     {availableCourses.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center p-4 text-center text-muted-foreground">
@@ -913,14 +913,14 @@ const daysOfWeek = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه
             {viewSettings.preferences && <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="preferences" className="border-b-0">
                 <Card className="shadow-md">
-                <AccordionTrigger className="w-full p-4 text-right [&[data-state=open]]:border-b sm:p-6">
+                <AccordionTrigger className="w-full p-6 text-right [&[data-state=open]]:border-b">
                     <CardHeader className="p-0 text-right">
                         <CardTitle className="flex items-center gap-2"><BrainCircuit /> اولویت‌های شما</CardTitle>
                         <CardDescription className="text-right">به تحلیلگر سیستم بگویید چه برنامه‌ای برایتان بهتر است.</CardDescription>
                     </CardHeader>
                 </AccordionTrigger>
                 <AccordionContent>
-                    <CardContent className="p-4 pt-6 sm:p-6">
+                    <CardContent className="p-6">
                         <StudentPreferencesForm
                             preferences={studentPreferences}
                             onPreferencesChange={setStudentPreferences}
