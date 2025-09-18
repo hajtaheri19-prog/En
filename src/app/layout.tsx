@@ -15,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
       <head>
+      <meta name="google-site-verification" content="mRgzbgF0IuUWFCY-xYAJ58RDGIfc3x1MpAPpoJCbH38" />
       </head>
       <body className="font-body antialiased bg-secondary/30">
         {children}
